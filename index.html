@@ -490,6 +490,7 @@ const PAY_IN_FULL_REDUCTION = 5;   // percent
 const REDUCTION_PHASES = ["Reconnect"];   // only standard-price Reconnect plans get the pay-in-full reduction
 const CARD_FEE = 2.4;              // percent, on instalments paid by credit card in office
 const WEEKS_PER_PAYMENT = 4;          // one payment for every 4 weeks of the plan
+const MIN_WEEKS_FOR_INSTALMENTS = 7;  // 7+ week plans always get at least 2 payments (5–6 weeks: pay in full)
 const PAID_OFF_DAYS_BEFORE_END = 14;   // every payment is in at least 2 weeks before the plan ends
 const MIN_DAYS_TO_FIRST_DRAW = 15;    // first GoCardless withdrawal is at least this many days after payment 1
 // The journey printed on the plan. Maintain sits at the top alongside Optimize.
@@ -696,10 +697,11 @@ function payDates(start, n) {
   const first = nextDraw(addDays(start, MIN_DAYS_TO_FIRST_DRAW));
   return Array.from({ length: n }, (_, i) => i === 0 ? start : new Date(first.getFullYear(), first.getMonth() + i - 1, first.getDate()));
 }
-// One payment per full 4 weeks of care, rounded down (10 weeks = 2, 14 weeks = 3), and never so many that
+// One payment per full 4 weeks of care, rounded down (10 weeks = 2, 14 weeks = 3), at least 2 from 7 weeks up,
+// and never so many that
 // the last one falls within 2 weeks of the end of the plan.
 function paymentCount(start, weeks, end) {
-  let n = Math.max(1, Math.floor(weeks / WEEKS_PER_PAYMENT));
+  let n = Math.max(weeks >= MIN_WEEKS_FOR_INSTALMENTS ? 2 : 1, Math.floor(weeks / WEEKS_PER_PAYMENT));
   const latest = addDays(end, -PAID_OFF_DAYS_BEFORE_END);
   while (n > 1 && payDates(start, n)[n - 1] > latest) n--;
   return n;

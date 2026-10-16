@@ -882,7 +882,7 @@ const mast = () => `<header class="mast"><div class="logo"><img src="${S.audienc
 
 // Plain-text note for the patient's file: plan, frequency, fee, how they're paying, and every date.
 // How the team names the payment options: 1 = pay in full, 2A = instalments by bank (PAD), 2B = by card, 3 = pay per visit.
-const CHOICES = [["full", "1 · Pay in full"], ["bank", "2A · Bank (PAD)"], ["card", "2B · Credit card"], ["ppv", "3 · Pay per visit"]];
+const CHOICES = [["full", "1 · Pay in full"], ["bank", "2A · Bank (PAD)"], ["card", "2B · Credit card"], ["ppv", "3 · Pay per visit (if asked)"]];
 function fileNote(c, name, kid) {
   const d = x => long(x), L = [];
   const freq = c.rows.map(r => `${r.t} for ${r.w} weeks`).join(", then ");
@@ -967,7 +967,7 @@ function render() {
   const shortD = d => d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const payBlock = onePage ? `<section class="sec">
       <div class="h3"><h3>How would you like to pay?</h3><span>Payment 1 is at the first visit</span></div>
-      <div class="tiers ${c.planOnly && c.n > 1 ? "four" : ""}">
+      <div class="tiers">
         <div class="tier"><span class="t">Option 1 · Pay in full</span>
           <div class="amt sm">1 payment</div><div class="was"><span class="pill quiet">No fee</span></div>
           <ul><li>Paid at the first visit</li><li><b>No processing fee, even by credit card</b></li></ul>
@@ -979,10 +979,6 @@ function render() {
         <div class="tier"><span class="t">Option 2B · Monthly, card</span>
           <div class="amt sm">${c.n} payments</div><div class="was"><span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span></div>
           <ul><li>Charged in office on the same dates; the card machine adds the fee</li><li><b>The card fee can't be claimed on insurance</b></li></ul>
-          <div class="tick"><i></i>I choose this</div></div>` : ""}
-        ${c.planOnly ? `<div class="tier"><span class="t">Option 3 · Pay per visit</span>
-          <div class="amt sm">${money(PRICE_FULL).replace(".00", "")}<small>/ visit</small></div><div class="was">Without care plan pricing</div>
-          <ul><li>Pay at each visit</li><li>Totals for each frequency are in the table above</li></ul>
           <div class="tick"><i></i>I choose this</div></div>` : ""}
       </div>
       ${c.n > 1 ? `<p class="paydates num"><b>Payment dates for options 2A and 2B:</b> ${c.pays.map((p, i) => i === 0 ? "first visit" : shortD(p.date)).join(" · ")}</p>` : ""}
@@ -1001,8 +997,8 @@ function render() {
     ${c.cmpRows.length ? `<section class="sec">
       <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), re-examination included</span></div>
       <table class="cmp num">
-        <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${money(c.price)} per visit</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th>${c.planOnly ? `<th>Pay per visit<small>${money(PRICE_FULL)} per visit</small></th>` : ""}<th></th></tr></thead>
-        <tbody>${c.cmpRows.map(r => `<tr><td>${r.label}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.planOnly ? `<td class="ppvc">${money(r.ppv)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${money(c.price)} per visit</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th><th></th></tr></thead>
+        <tbody>${c.cmpRows.map(r => `<tr><td>${r.label}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
     </section>` : ""}
 
@@ -1016,7 +1012,7 @@ function render() {
       ${c.collSave ? `<div class="coll">
         <div class="cside"><span>Standard price</span><b class="num"><s>${money(PRICE_FULL)}</s> per visit</b><b class="num big"><s>${money(c.stdTotal)}</s></b></div>
         <div class="cside you"><span>Your Connect Collective price</span><b class="num">${money(c.price)} per visit</b><b class="num big">${money(c.total)}</b></div>
-        <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>${c.planOnly ? `<p class="coll-note">Connect Collective pricing applies when you choose one of the care plan options on page 2. Paying visit by visit is ${money(PRICE_FULL)} per visit.</p>` : ""}` : ""}
+        <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>${c.planOnly ? `<p class="coll-note">Connect Collective pricing applies when you choose one of the care plan options on page 2.</p>` : ""}` : ""}
       <div class="fee"><span>${Whose} program fee${c.collective ? " · Connect Collective pricing" : ""}</span><b class="num">${money(c.total)}</b></div>
     </section>`}
 
@@ -1088,7 +1084,7 @@ function render() {
         <div class="tick"><i></i>I choose this</div>
       </div>` : ""}
     </div>
-    ${c.planOnly ? `<div class="ppv"><div><span class="t">Option 3 · Without a care plan</span><b>Pay per visit</b></div><span class="num">${money(PRICE_FULL)} per visit: ${money(c.stdTotal)} for the same visits and exams, <strong>${money(c.collSave)} more</strong> than the care plan options.</span><span class="tick"><i></i>I choose this</span></div>` : ""}
+
 
     ${inst ? `<section class="sec">
       <div class="h3"><h3>Instalment schedule</h3><span>Payment 1 is at your first visit</span></div>

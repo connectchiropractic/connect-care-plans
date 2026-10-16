@@ -606,6 +606,7 @@ const INCLUDED = [
 // Optimize and Maintenance run for a set timeframe; every frequency is counted over it.
 const TIMEFRAMES = [{ label: "6 months", w: 26 }, { label: "1 year", w: 52 }];
 const COMPARE = { Optimize: { on: [4, 5] }, Maintenance: { on: [6, 7] } };
+const YEARLY_WEEKS = 52;   // plans this long must include a progress exam around 6 months (CCO)
 const PROMISE_PHASE = "Reconnect";   // the Connect Care Promise is only offered on Reconnect plans
 const PROGRESS_EXAM_PHASES = ["Reconnect"];   // progress exams are on by default here; later phases start at None
 const VISIT_CHART_PHASE = "Reconnect";   // the week-by-week visit chart only shows on the first plan
@@ -896,12 +897,18 @@ function compute() {
   const weeks = schedule.length;
   const visits = schedule.reduce((a, b) => a + b, 0);
   // Progress exams sit part-way through: halfway for one, at the thirds for two.
+  // CCO: a plan that runs a year needs a progress examination around the 6-month mark.
+  const yearly = weeks >= YEARLY_WEEKS;
+  $("nProg").querySelector('option[value="0"]').disabled = yearly;
+  if (yearly && $("nProg").value === "0") $("nProg").value = "1";
   const nProg = parseInt($("nProg").value) || 0;
   // Suggested progress exam visit(s), from Dr. Steve's rules of thumb. The CA can type over them;
   // a change to the bands or the number of exams brings the suggestion back.
   const sig = JSON.stringify([S.bands, nProg]);
   if (sig !== S.progSig) { S.progSig = sig; S.progManual = null; }
-  const suggested = suggestProg(rows, visits, nProg);
+  // On yearly plans the first progress exam is the visit that falls around week 26.
+  const sixMonthVisit = Math.max(1, schedule.slice(0, Math.round(YEARLY_WEEKS / 2)).reduce((a, b) => a + b, 0));
+  const suggested = yearly && nProg >= 1 ? [sixMonthVisit, ...suggestProg(rows, visits, nProg).slice(1)].slice(0, nProg) : suggestProg(rows, visits, nProg);
   if (!S.progManual) suggested.forEach((v, i) => $("pa" + i).value = v);
   $("pa0").parentElement.hidden = nProg < 1;
   $("pa1").parentElement.hidden = nProg < 2;
@@ -1010,7 +1017,7 @@ function render() {
   // form readouts
   c.rows.forEach((r, i) => { const el = $("bv" + i); if (el) el.textContent = `= ${r.v}`; });
   $("btot").textContent = `${c.weeks} weeks · ${c.visits} visits`;
-  $("progHint").textContent = c.nProg ? `Suggested from the visit bands. Type over it if Dr. Steve wants a different visit.` : "";
+  $("progHint").textContent = c.weeks >= YEARLY_WEEKS ? `Required on 1-year plans (CCO): a progress exam around 6 months, visit ${c.progAt[0]}.` : c.nProg ? `Suggested from the visit bands. Type over it if Dr. Steve wants a different visit.` : "";
   $("cc").disabled = !c.fullPricePhase;
   $("ccWrap").classList.toggle("locked", !c.fullPricePhase);
   $("priceOut").textContent = money(c.price);
@@ -1079,7 +1086,7 @@ function render() {
         <tfoot><tr><td>Total</td><td class="num">${c.weeks} weeks</td><td class="num">${c.visits} visits</td></tr></tfoot></table>
     </section>`}
     ${c.cmpRows.length ? `<section class="sec">
-      <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), re-examination included</span></div>
+      <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), ${c.nProg ? `${c.weeks >= YEARLY_WEEKS ? "6-month progress exam" : `${c.nProg} progress exam${c.nProg > 1 ? "s" : ""}`} and ` : ""}re-examination included</span></div>
       <table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)} per visit${c.collSave ? " · Connect Collective" : ""}</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th>${c.collSave ? "<th>Member savings</th>" : ""}<th></th></tr></thead>
         <tbody>${c.cmpRows.map(r => `<tr class="${r.current ? "cur" : ""}"><td>${r.label}${r.current ? `<small>Current frequency</small>` : ""}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.collSave ? `<td class="save">${money(r.ppv - r.fee)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>

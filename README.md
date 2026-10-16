@@ -25,7 +25,7 @@ GitHub Pages publishes within a minute or two.
 
 ## Staff PIN
 
-The staff PIN screen is currently OFF (`PIN_ENABLED = false` in `index.html`); set it to `true` to turn it back on. When on, the maker opens behind a staff PIN screen. Each computer stays unlocked for
+The staff PIN screen is ON (`PIN_ENABLED = true` in `index.html`; set `false` to switch it off). When on, the maker opens behind a staff PIN screen. Each computer stays unlocked for
 30 days. Only a SHA-256 fingerprint of the PIN is in `index.html` (`PIN_HASH`),
 never the PIN itself. To change the PIN, replace `PIN_HASH` with the SHA-256 of
 `connect-careplans:` followed by the new PIN, for example:

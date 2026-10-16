@@ -400,7 +400,7 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .pill.bonus { font-size: 10px; padding: 1px 7px; white-space: nowrap; display: table; margin: 3px 0 1px; }
 .incl-row div { overflow-wrap: anywhere; }
 .pill.bonus.inl { display: inline-block; margin: 0 0 0 6px; vertical-align: 1px; }
-#inNMwrap[hidden], #inFPwrap[hidden], #inPHwrap[hidden], #inMPwrap[hidden] { display: none; }
+#inNMwrap[hidden], #inFPwrap[hidden], #inPHwrap[hidden], #inMPwrap[hidden], #inKGwrap[hidden], #ageWrap[hidden] { display: none; }
 .lbl { font: 600 12px var(--ui); color: var(--soft); margin-top: 4px; }
 @media (max-width: 600px) { .incl-row { grid-template-columns: minmax(0, 1fr); } }
 /* Connect Kids plans: the Kids logo, and the child's name in a hand-lettered face that matches it */
@@ -541,6 +541,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       </div>
       <div class="two">
         <label>First visit<input id="start" type="date"></label>
+        <label id="ageWrap">Child's age (years)<input id="childAge" type="number" min="0" max="17" step="1" placeholder="e.g. 2"></label>
       </div>
     </section>
 
@@ -568,23 +569,26 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
         <button type="button" class="add" id="addBrk">+ Add another closure</button></div>
     </section>
 
-    <section class="step"><h2><b>5</b>Fees & included</h2>
+    <section class="step"><h2><b>5</b>Fees</h2>
       <label class="cc" id="ccWrap"><input type="checkbox" id="cc"> <span>Connect Collective pricing<small>Family & friends of a practice member</small></span></label>
       <div class="price"><span>Price per visit</span><b class="num" id="priceOut"></b><small id="priceWhy"></small></div>
-      <div class="lbl">Included with their care</div>
-      <label class="cc" id="inPHwrap"><input type="checkbox" id="inPH" checked> <span>PracticeHub app<small>Reminders, calendar sync, exercise library, mobility tests</small></span></label>
-      <label class="cc" id="inMPwrap"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
-      <label class="cc"><input type="checkbox" id="inKG"> <span>Connect Kids Milestone Guide<small>For children: tick when the patient is a child</small></span></label>
-      <label class="cc" id="inNMwrap"><input type="checkbox" id="inNM"> <span>Bonus: Neuro Movement session with Tyler<small>Complimentary 30 minutes, $90 value</small></span></label>
-      <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their immediate family gets Connect Collective pricing while they're active</small></span></label>
     </section>
 
-    <section class="step"><h2><b>6</b>Payments</h2>
+    <section class="step"><h2><b>6</b>Included &amp; bonuses</h2>
+      <label class="cc" id="inPHwrap"><input type="checkbox" id="inPH" checked> <span>PracticeHub app<small>Reminders, calendar sync, exercise library, mobility tests</small></span></label>
+      <label class="cc" id="inMPwrap"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
+      <label class="cc" id="inKGwrap"><input type="checkbox" id="inKG"> <span>Connect Kids Milestone Guide<small>Children 3 and under; added automatically from the child's age</small></span></label>
+      <label class="cc" id="inNMwrap"><input type="checkbox" id="inNM"> <span>Bonus: Neuro Movement session with Tyler<small>Complimentary 30 minutes, $90 value</small></span></label>
+      <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their immediate family gets Connect Collective pricing while they're active</small></span></label>
+      <p class="hint" id="kgHint"></p>
+    </section>
+
+    <section class="step"><h2><b>7</b>Payments</h2>
       <p class="hint">Worked out for you: one payment for every full 4 weeks of the plan (10 weeks = 2, 14 weeks = 3), all paid at least 2 weeks before the plan ends. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
       <div class="pays" id="pays"></div>
     </section>
 
-    <section class="step"><h2><b>7</b>Note for the patient file</h2>
+    <section class="step"><h2><b>8</b>Note for the patient file</h2>
       <div class="lbl">Patient chose</div>
       <div id="pickBox" class="cmpbox"></div>
       <div class="chips" id="choice"></div>
@@ -689,11 +693,17 @@ function chips(el, items, isOn, onPick) {
   el.onclick = e => { const b = e.target.closest("button"); if (b) { onPick(items[+b.dataset.i], +b.dataset.i); drawForm(); render(); } };
 }
 // Adult Rebuild plans get the Neuro Movement session with Tyler automatically (the CA can still untick it).
+// The Kids Milestone Guide is for children 3 and under; it is added automatically from the child's age.
+const MILESTONE_MAX_AGE = 3;
+const childAge = () => { const v = $("childAge").value.trim(); return v === "" ? null : +v; };
+const guideEligible = () => S.audience === "Kids" && childAge() !== null && childAge() <= MILESTONE_MAX_AGE;
+function autoGuide() { $("inKG").checked = guideEligible(); }
+$("childAge").addEventListener("input", autoGuide);
 const AUTO_BONUS = { id: "inNM", phase: "Rebuild", audience: "Adult" };
 function autoBonus() { $(AUTO_BONUS.id).checked = S.phase === AUTO_BONUS.phase && S.audience === AUTO_BONUS.audience; }
 function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
-    it => { S.audience = it.v; $("inKG").checked = it.v === "Kids"; autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
+    it => { S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
   chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
       const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.cur = -1; S.pick = -1;
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
@@ -826,7 +836,7 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, ag: $("childAge").value
   }));
 }
 function loadPlanCode(code) {
@@ -837,6 +847,7 @@ function loadPlanCode(code) {
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
   drawBreaks();
+  $("childAge").value = d.ag ?? "";
   INCLUDED.forEach((x, i) => $(x.id).checked = !!d.in[i]);
   if (d.pa) { $("pa0").value = d.pa[0]; $("pa1").value = d.pa[1]; S.progManual = true; } else S.progManual = null;
   S.progSig = JSON.stringify([S.bands, d.np]);
@@ -1116,6 +1127,10 @@ function render() {
   const brkNote = c.brkW ? `<p class="brk-note"><i>${hatch(14, 10, 4)}</i>Office closed ${c.breaks.map(b => `${shortDate(b.date)} – ${shortDate(addDays(b.date, b.w * 7 - 1))}`).join(" and ")}. Your time frame includes ${c.breaks.length > 1 ? "these breaks" : "this break"}.</p>` : "";
   const stops = journeyStops(S.phase), jIdx = stops.findIndex(j => j.name === S.phase);
   const inclOK = x => !x.phases || x.phases.includes(S.phase);
+  $("ageWrap").hidden = S.audience !== "Kids";
+  $("inKGwrap").hidden = !guideEligible();
+  if (!guideEligible()) $("inKG").checked = false;
+  $("kgHint").textContent = S.audience !== "Kids" ? "" : childAge() === null ? "Enter the child's age in step 2 to see if the Milestone Guide applies." : guideEligible() ? "" : `The Milestone Guide is for children ${MILESTONE_MAX_AGE} and under.`;
   const isBonus = x => (x.bonusIn || []).includes(S.phase);   // always included, marked Bonus
   INCLUDED.filter(x => x.phases || x.bonusIn).forEach(x => $(x.id + "wrap").hidden = !inclOK(x) || isBonus(x));
   const incl = INCLUDED.filter(x => (isBonus(x) || $(x.id).checked) && inclOK(x));

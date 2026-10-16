@@ -879,7 +879,7 @@ function render() {
         <b class="pr-and">and</b>
         <div class="pr-item"><i aria-hidden="true">✓</i><span>Credit <em>100%</em> of what you've invested toward another licensed provider of your choice.</span></div>
       </div>
-      <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at the standard per-visit rate. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
+      <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at ${c.collective ? `your Connect Collective rate of ${money(c.price)} per visit` : "the standard per-visit rate"}. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
     ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length}">${incl.map(x => `<div><b>${x.name}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
@@ -953,7 +953,7 @@ function render() {
 
     <section class="sec"><div class="h3"><h3>Our policy</h3></div>
       <ol class="pol">
-        <li>Your care is delivered as a clinical program, not as pay-per-visit. If you choose to stop care before your program is completed, you are financially responsible for the visits you have already received, at the standard visit rate. Any remaining unused credit on your account after those visits are reconciled will be refunded to you.
+        <li>Your care is delivered as a clinical program, not as pay-per-visit. If you choose to stop care before your program is completed, you are financially responsible for the visits you have already received, at ${c.collective ? `your Connect Collective rate of ${money(c.price)} per visit` : "the standard visit rate"}. Any remaining unused credit on your account after those visits are reconciled will be refunded to you.
           ${inst ? `<div class="ex num"><span>Example: on this plan, you stop after ${c.exWeeks} weeks</span><span></span><span></span>
             <span>Adjustments received</span><b>${c.exVisits} × ${money(c.price)} = ${money(got)}</b><span>what you received</span>
             <span>Payments made</span><b>${c.exPaid.length} × ${money(c.pays[0].amt)} = ${money(paid)}</b><span>what you paid</span>

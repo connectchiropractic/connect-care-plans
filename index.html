@@ -447,7 +447,7 @@ body.pv .pol li { margin-bottom: 5px; }
     </section>
 
     <section class="step"><h2><b>6</b>Payments</h2>
-      <p class="hint">Worked out for you: one payment for every 4 weeks of the plan. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
+      <p class="hint">Worked out for you: one payment for every full 4 weeks of the plan (10 weeks = 2, 14 weeks = 3), all paid at least 2 weeks before the plan ends. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
       <div class="pays" id="pays"></div>
     </section>
 
@@ -490,6 +490,7 @@ const PAY_IN_FULL_REDUCTION = 5;   // percent
 const REDUCTION_PHASES = ["Reconnect"];   // only standard-price Reconnect plans get the pay-in-full reduction
 const CARD_FEE = 2.4;              // percent, on instalments paid by credit card in office
 const WEEKS_PER_PAYMENT = 4;          // one payment for every 4 weeks of the plan
+const PAID_OFF_DAYS_BEFORE_END = 14;   // every payment is in at least 2 weeks before the plan ends
 const MIN_DAYS_TO_FIRST_DRAW = 15;    // first GoCardless withdrawal is at least this many days after payment 1
 // The journey printed on the plan. Maintain sits at the top alongside Optimize.
 // Included with every plan (the CA can untick one). Only list what really exists for patients today.
@@ -689,6 +690,21 @@ function suggestProg(rows, visits, n) {
   return [Math.round(visits / 3), Math.round(visits * 2 / 3)];
 }
 
+// Payment 1 in office on the first visit. The first GoCardless withdrawal is the next 1st or 15th
+// at least 15 days later (so 15–30 days out); after that it comes out on that same day each month.
+function payDates(start, n) {
+  const first = nextDraw(addDays(start, MIN_DAYS_TO_FIRST_DRAW));
+  return Array.from({ length: n }, (_, i) => i === 0 ? start : new Date(first.getFullYear(), first.getMonth() + i - 1, first.getDate()));
+}
+// One payment per full 4 weeks of care, rounded down (10 weeks = 2, 14 weeks = 3), and never so many that
+// the last one falls within 2 weeks of the end of the plan.
+function paymentCount(start, weeks, end) {
+  let n = Math.max(1, Math.floor(weeks / WEEKS_PER_PAYMENT));
+  const latest = addDays(end, -PAID_OFF_DAYS_BEFORE_END);
+  while (n > 1 && payDates(start, n)[n - 1] > latest) n--;
+  return n;
+}
+
 function compute() {
   const fullPricePhase = FULL_PRICE_PHASES.includes(S.phase);
   const collective = !fullPricePhase || $("cc").checked;
@@ -721,31 +737,26 @@ function compute() {
   // The 5% is for standard-price Reconnect plans only; Connect Collective pricing never stacks with it.
   const disc = REDUCTION_PHASES.includes(S.phase) && !collective ? PAY_IN_FULL_REDUCTION : 0;
   const saving = r2(total * disc / 100), full = r2(total - saving);
-  const n = Math.max(1, Math.ceil(weeks / WEEKS_PER_PAYMENT));
-  const each = Math.floor(total / n * 100) / 100;
   const start = parse($("start").value) || new Date();
-  // Payment 1 in office on the first visit. The first GoCardless withdrawal
-  // is the next 1st or 15th at least 15 days later (so 15–30 days out); after that it comes
-  // out on that same day each month.
-  const firstDraw = nextDraw(addDays(start, MIN_DAYS_TO_FIRST_DRAW));
-  const pays = Array.from({ length: n }, (_, i) => {
-    const amt = i === n - 1 ? r2(total - each * (n - 1)) : each;
-    const date = i === 0 ? start : new Date(firstDraw.getFullYear(), firstDraw.getMonth() + i - 1, firstDraw.getDate());
-    return { date, amt, card: r2(amt * (1 + CARD_FEE / 100)) };
-  });
-  const cardTotal = r2(pays.reduce((a, p) => a + p.card, 0));
   // Office closure: closed weeks slot into the schedule where they fall and push the end date out.
   const brkOn = $("brk").checked, brkDate = parse($("brkDate").value);
   const brkW = brkOn && brkDate ? parseInt($("brkW").value) : 0;
   const brkAt = brkW ? Math.min(weeks, Math.max(0, Math.round((brkDate - start) / 864e5 / 7))) : -1;
   const end = addDays(start, (weeks + brkW) * 7 - 1);
+  const n = paymentCount(start, weeks, end);
+  const each = Math.floor(total / n * 100) / 100;
+  const pays = payDates(start, n).map((date, i) => {
+    const amt = i === n - 1 ? r2(total - each * (n - 1)) : each;
+    return { date, amt, card: r2(amt * (1 + CARD_FEE / 100)) };
+  });
+  const cardTotal = r2(pays.reduce((a, p) => a + p.card, 0));
   // policy example: stop after 12 weeks (about 3 months), counting payments made by then
   const exWeeks = Math.min(12, Math.max(weeks - 1, 1));
   const exVisits = schedule.slice(0, exWeeks).reduce((a, b) => a + b, 0);
   const exCut = addDays(start, exWeeks * 7);
   const exPaid = pays.filter(p => p.date < exCut);
   // Frequency comparison (Optimize / Maintain): the same weeks, exams and price at each frequency.
-  const nPay = Math.max(1, Math.ceil(weeks / WEEKS_PER_PAYMENT));
+  const nPay = n;
   const cmpSet = COMPARE[S.phase] ? [...new Set([...S.cmp, S.bands[0].q])].sort() : [];
   const cmpRows = cmpSet.length > 1 ? cmpSet.map(q => {
     const v = Math.ceil(weeks * FREQS[q][0] - 1e-9), fee = r2((v + nProg + 1) * price);

@@ -252,6 +252,19 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp tr.on td { background: var(--mint2); }
 .cmp .tick { justify-content: flex-end; padding: 0; }
 .cmpbox { display: grid; gap: 6px; }
+.paper[hidden] { display: none !important; }
+.cmp th small { display: block; font-weight: 500; font-size: 10.5px; color: var(--faint); }
+.cmp .ppvc { color: var(--soft); }
+.paychoice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+.paychoice > div { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; font-size: 12.5px; color: var(--soft); }
+.paychoice .tick { grid-row: 1 / span 2; grid-column: 1; align-self: start; padding: 2px 0 0; }
+.paychoice b, .paychoice > div > span:not(.tick) { grid-column: 2; }
+.paychoice b { font: 700 14px var(--display); color: var(--ink); letter-spacing: -.01em; }
+.paychoice .gcl, .paychoice img { height: 13px; vertical-align: -2px; }
+.paydates { margin: 0; font-size: 12px; color: var(--soft); }
+.paydates b { color: var(--ink); }
+.terms-note { margin: 0; font-size: 12px; color: var(--soft); }
+@media (max-width: 600px) { .paychoice { grid-template-columns: minmax(0, 1fr); } }
 #note { font: 500 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink); background: var(--field); border: 1px solid var(--rule); border-radius: 7px; padding: 10px; width: 100%; resize: vertical; white-space: pre; overflow-x: auto; }
 #copyNote { justify-self: start; }
 .reopen { margin-top: -10px; }
@@ -397,7 +410,7 @@ body.pv .pol li { margin-bottom: 5px; }
   .app { display: block; }
   .desk { padding: 0; display: block; }
   .paper { break-after: page; overflow: hidden; }
-  .paper:last-child { break-after: auto; }
+  .paper:last-child, #p1:has(+ #p2[hidden]) { break-after: auto; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
@@ -594,7 +607,7 @@ $("f").addEventListener("submit", e => e.preventDefault());
 const PAGE_W_IN = 7.6, PAGE_H = 10.1 * 96 - 6;
 function fitPages() {
   document.body.classList.add("pv");
-  document.querySelectorAll(".paper").forEach(p => {
+  document.querySelectorAll(".paper:not([hidden])").forEach(p => {
     p.style.zoom = ""; p.style.width = "";
     let z = 1;
     for (let i = 0; i < 3; i++) {   // widening rewraps text, so settle in a few passes
@@ -654,7 +667,7 @@ async function buildPdf() {
   const M = 0.45;
   document.body.classList.add("pv");
   try {
-    const pages = [...document.querySelectorAll(".paper")];
+    const pages = [...document.querySelectorAll(".paper:not([hidden])")];
     for (const [i, p] of pages.entries()) {
       p.style.zoom = ""; p.style.width = "";
       let z = 1;
@@ -794,9 +807,9 @@ function compute() {
   // Frequency comparison (Optimize / Maintain): the same weeks, exams and price at each frequency.
   const nPay = n;
   const cmpSet = COMPARE[S.phase] ? [...new Set([...S.cmp, S.bands[0].q])].sort() : [];
-  const cmpRows = cmpSet.length > 1 ? cmpSet.map(q => {
+  const cmpRows = cmpSet.length ? cmpSet.map(q => {
     const v = Math.ceil(weeks * FREQS[q][0] - 1e-9), fee = r2((v + nProg + 1) * price);
-    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), shown: S.bands.length === 1 && S.bands[0].q === q };
+    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), ppv: r2((v + nProg + 1) * PRICE_FULL), shown: S.bands.length === 1 && S.bands[0].q === q };
   }) : [];
   return { cmpRows, nPay, planOnly, stdTotal, collSave, brkW, brkAt, brkDate, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
 }
@@ -882,6 +895,20 @@ function render() {
     <div class="path">${JOURNEY.map((j, i) => `${i ? `<span class="link ${i <= jIdx ? "done" : ""}"></span>` : ""}<span class="stop ${i < jIdx ? "done" : i === jIdx ? "now" : "next"}"><i>${i < jIdx ? "✓" : ""}</i>${j.name}${i === jIdx ? `<span class="here">You are here</span>` : ""}</span>`).join("")}</div></section>`;
   const freqRows = c.rows.filter(r => r.w).map(r => `<tr><td>${r.t}</td><td class="num">${r.w} weeks</td><td class="num">${r.v} visits</td></tr>`).join("");
 
+  // Optimize and Maintain: one page. Frequency options, how they'd like to pay, and a signature.
+  const onePage = !!COMPARE[S.phase];
+  const drawDay1 = c.pays[1] ? (c.pays[1].date.getDate() === 1 ? "1st" : "15th") : "";
+  const shortD = d => d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+  const payBlock = onePage ? `<section class="sec">
+      <div class="h3"><h3>How would you like to pay?</h3><span>Payment 1 is at the first visit</span></div>
+      <div class="paychoice">
+        <div><span class="tick"><i></i></span><b>Pay in full</b><span>One payment at the first visit. No processing fee, even by credit card.</span></div>
+        ${c.n > 1 ? `<div><span class="tick"><i></i></span><b>Monthly · bank withdrawal</b><span>${GC_LOGO} on the ${drawDay1} of each month. No fee.</span></div>
+        <div><span class="tick"><i></i></span><b>Monthly · credit card</b><span>In office on the same dates. The card machine adds ${CARD_FEE}%; the card fee can't be claimed on insurance.</span></div>` : ""}
+        ${c.planOnly ? `<div><span class="tick"><i></i></span><b>Pay per visit</b><span>${money(PRICE_FULL)} per visit, without care plan pricing.</span></div>` : ""}
+      </div>
+      ${c.n > 1 ? `<p class="paydates num"><b>Payment dates:</b> ${c.pays.map((p, i) => i === 0 ? "first visit" : shortD(p.date)).join(" · ")}</p>` : ""}
+    </section>` : "";
   $("p1").innerHTML = `${mast()}
     <section class="who"><div><div class="k">Care plan for</div><h2>${esc(first || "Patient")} ${esc(last)}</h2></div>
       <div class="tf">Time frame<b>${long(c.start)} – ${long(c.end)}</b></div></section>
@@ -896,12 +923,12 @@ function render() {
     ${c.cmpRows.length ? `<section class="sec">
       <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), re-examination included</span></div>
       <table class="cmp num">
-        <thead><tr><th>How often</th><th>Visits</th><th>Program fee</th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th><th></th></tr></thead>
-        <tbody>${c.cmpRows.map(r => `<tr class="${r.shown ? "on" : ""}"><td>${r.label}${r.shown ? `<small>Shown on page 2</small>` : ""}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${money(c.price)} per visit</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th>${c.planOnly ? `<th>Pay per visit<small>${money(PRICE_FULL)} per visit</small></th>` : ""}<th></th></tr></thead>
+        <tbody>${c.cmpRows.map(r => `<tr><td>${r.label}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.planOnly ? `<td class="ppvc">${money(r.ppv)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
     </section>` : ""}
 
-    <section class="sec">
+    ${onePage ? payBlock : `<section class="sec">
       <div class="h3"><h3>Program fee</h3><span>${c.nProg ? `Progress examination at visit ${c.progAt.join(" & ")}` : ""}${c.nProg ? " · " : ""}Re-examination after visit ${c.visits}</span></div>
       <table class="plan"><tbody>
         <tr><td>Check-ups & needed corrections</td><td class="num">${c.visits} × ${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)}</td><td class="num">${money(c.visitFee)}</td></tr>
@@ -913,7 +940,7 @@ function render() {
         <div class="cside you"><span>Your Connect Collective price</span><b class="num">${money(c.price)} per visit</b><b class="num big">${money(c.total)}</b></div>
         <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>${c.planOnly ? `<p class="coll-note">Connect Collective pricing applies when you choose one of the care plan options on page 2. Paying visit by visit is ${money(PRICE_FULL)} per visit.</p>` : ""}` : ""}
       <div class="fee"><span>${Whose} program fee${c.collective ? " · Connect Collective pricing" : ""}</span><b class="num">${money(c.total)}</b></div>
-    </section>
+    </section>`}
 
     ${S.phase === PROMISE_PHASE && c.nProg ? `<section class="promise">
       <div class="pr-head">
@@ -930,9 +957,12 @@ function render() {
     </section>` : ""}
 
     ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length}">${incl.map(x => `<div><b>${x.name}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
-    <div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>
-    <div class="foot"><span>Page 1 of 2 · Care plan</span><span>${esc(full)}</span></div>`;
+    ${onePage ? `<p class="terms-note">The terms and policies of your Connect care agreement continue to apply. Ask us anytime for a copy.</p>
+    <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>`
+    : `<div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>`}
+    <div class="foot"><span>Page 1 of ${onePage ? 1 : 2} · Care plan</span><span>${esc(full)}</span></div>`;
 
+  $("p2").hidden = onePage;
   const inst = c.n > 1;
   const got = r2(c.exVisits * c.price), paid = r2(c.exPaid.reduce((a, p) => a + p.amt, 0)), diff = r2(got - paid);
   const perVisit = r2(c.price * (1 - c.disc / 100));

@@ -155,8 +155,8 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .h3 span { font: 600 12px var(--ui); color: var(--faint); }
 .sec { display: grid; gap: 14px; }
 
-.weeks { display: flex; gap: 3px; flex-wrap: wrap; }
-.wk { flex: 1 0 22px; max-width: 34px; display: grid; justify-items: center; gap: 4px; padding: 6px 0 5px; border-radius: 4px; border: 1px solid var(--rule); }
+.weeks { display: flex; gap: 3px; flex-wrap: nowrap; }   /* always one row, stretched across the page */
+.wk { flex: 1 1 0; min-width: 0; display: grid; justify-items: center; gap: 4px; padding: 6px 0 5px; border-radius: 4px; border: 1px solid var(--rule); }
 .wk .d { display: flex; flex-direction: column-reverse; gap: 3px; height: 39px; }
 .wk .d i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 .wk .n { font: 600 9px var(--ui); color: var(--faint); }
@@ -382,7 +382,10 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .plan td { border-bottom: 0; padding: 5px 0; }
 .plan tbody tr:first-child td { padding-top: 0; }
 .wk { border: 0; padding: 2px 0; }
-.weeks { padding-top: 16px; row-gap: 20px; }
+.weeks { padding-top: 16px; }
+.weeks.dense { gap: 1px; }
+.weeks.dense .wk .n { font-size: 7.5px; letter-spacing: -.02em; }
+.weeks.dense .wk .d i { width: 5px; height: 5px; }
 .incl { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 12px; }
 .incl h4 { margin: 0; font: 700 15px var(--display); letter-spacing: -.015em; color: var(--ink); }
 .incl-row { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 6px 28px; }
@@ -1071,7 +1074,7 @@ function render() {
 
     ${c.cmpRows.length ? "" : `<section class="sec">
       <div class="h3"><h3>${Whose} visit frequency</h3><span>${c.weeks} weeks · ${c.visits} visits</span></div>
-      ${S.phase === VISIT_CHART_PHASE ? `<div class="weeks" aria-label="One column per week, one dot per visit">${weeksHtml}</div>` : ""}${brkNote}
+      ${S.phase === VISIT_CHART_PHASE ? `<div class="weeks ${c.weeks + c.brkW > 30 ? "dense" : ""}" aria-label="One column per week, one dot per visit">${weeksHtml}</div>` : ""}${brkNote}
       <table class="plan"><tbody>${freqRows}</tbody>
         <tfoot><tr><td>Total</td><td class="num">${c.weeks} weeks</td><td class="num">${c.visits} visits</td></tr></tfoot></table>
     </section>`}

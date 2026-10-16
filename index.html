@@ -281,6 +281,35 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 @media (max-width: 700px) { .tiers { grid-template-columns: minmax(0, 1fr); } .tier .t { min-height: 0; } }
 @media print { .tier, .sch { break-inside: avoid; } }
 
+/* Calm pass: one label style, green only where it means something, fewer lines and boxes. */
+.tagline { font: 600 11px/1.45 var(--body); letter-spacing: 0; text-transform: none; color: var(--faint); }
+.tagline b { color: var(--soft); }
+.who .k, .jhead, .jhead span:first-child, .fee span, .tier .t, .init span, .foot, .sch td:first-child, .sch th:first-child,
+.cside span, .csave span, .pr-and, .tick, .schv th {
+  font-family: var(--body); font-weight: 600; font-size: 11.5px; letter-spacing: 0; text-transform: none; color: var(--soft);
+}
+.who .k { color: var(--faint); }
+.fee span { font-size: 13px; color: var(--ink); }
+.stop .here { letter-spacing: 0; text-transform: none; font-size: 11px; }
+.link { height: 1px; background: var(--rule); }
+.link.done { height: 2px; }
+.plan td { border-bottom: 0; padding: 5px 0; }
+.plan tbody tr:first-child td { padding-top: 0; }
+.wk { border: 0; padding: 2px 0; }
+.wk.off { border: 0; }
+.pr-item { border: 0; padding: 2px 0; }
+.promise .small { border-top: 0; padding-top: 0; }
+.tier ul { border-top: 0; padding-top: 4px; gap: 4px; }
+.tier li { padding-left: 0; }
+.tier li::before { display: none; }
+.tick { border-top: 0; padding-top: 4px; color: var(--ink); }
+.pill.quiet { box-shadow: none; padding: 0; color: var(--soft); font-weight: 600; }
+.pill.quiet::before { content: "· "; }
+.commit { border-left: 0; padding-left: 0; font-size: 14px; }
+.ex { border: 0; border-left: 2px solid var(--rule); border-radius: 0; padding: 4px 0 4px 12px; }
+.sch td { border-top: 0; }
+.sch thead th { border-bottom: 1px solid var(--rule); }
+
 /* Print layout. body.pv is switched on just before printing (and while measuring),
    so the sizes here are what lands on letter paper: 7.6in × 10.1in inside 0.45in margins. */
 body.pv .paper { width: 7.6in; max-width: none; padding: 0; box-shadow: none; border-radius: 0; gap: 16px; margin: 0; }
@@ -316,7 +345,7 @@ body.pv .schv { font-size: 10.5px; }
 body.pv .schv td { padding-block: 2px; }
 body.pv #p2 { gap: 12px; }
 body.pv #p2 .sec:has(.commit) .h3 { display: none; }
-body.pv .commit { font-size: 12px; padding-left: 10px; }
+body.pv .commit { font-size: 12px; padding-left: 0; }
 body.pv .tier .t { min-height: 30px; }
 body.pv .tier .flag { top: -9px; }
 body.pv .sch th { padding-bottom: 5px; }

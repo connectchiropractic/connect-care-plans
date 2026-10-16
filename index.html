@@ -486,7 +486,7 @@ body.pv .pol li { margin-bottom: 5px; }
       <label class="cc"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
       <label class="cc"><input type="checkbox" id="inKG"> <span>Connect Kids Milestone Guide<small>For children: tick when the patient is a child</small></span></label>
       <label class="cc" id="inNMwrap"><input type="checkbox" id="inNM"> <span>Bonus: Neuro Movement session with Tyler<small>Complimentary 30 minutes, $90 value</small></span></label>
-      <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their family gets Connect Collective pricing while they're active</small></span></label>
+      <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their immediate family gets Connect Collective pricing while they're active</small></span></label>
     </section>
 
     <section class="step"><h2><b>6</b>Payments</h2>
@@ -545,7 +545,7 @@ const INCLUDED = [
   // A bonus the CA can add on Rebuild, Optimize and Maintenance plans.
   { id: "inNM", name: "Neuro Movement session with Tyler", desc: "A complimentary 30-minute session.", value: 90, phases: ["Rebuild", "Optimize", "Maintenance"] },
   // Member perk: like employee pricing, the member's family gets Collective pricing while they stay active.
-  { id: "inFP", name: "Connect Collective pricing for your family", desc: "While you're an active member, your family members get Connect Collective pricing too.", tag: "Member perk", phases: ["Rebuild", "Optimize", "Maintenance"] }
+  { id: "inFP", name: "Connect Collective pricing for your immediate family", desc: "While you're an active member, your immediate family members get Connect Collective pricing too.", tag: "Member perk", phases: ["Rebuild", "Optimize", "Maintenance"] }
 ];
 // Optimize and Maintenance: the patient chooses between a few visit frequencies, shown side by side.
 // Values are FREQS positions: 4 = 5–7 days, 5 = 8–10 days, 6 = 10–14 days, 7 = 18–21 days, 8 = 25–28 days.
@@ -900,7 +900,7 @@ function fileNote(c, name, kid) {
   L.push(`Visit frequency: ${freq}`);
   L.push(`Time frame: ${d(c.start)} – ${d(c.end)} (${c.weeks} weeks${c.brkW ? `, plus ${c.brkW} week${c.brkW > 1 ? "s" : ""} office closure: ${c.breaks.map(b => `${d(b.date)} for ${b.w} wk${b.w > 1 ? "s" : ""}`).join("; ")}` : ""})`);
   const perks = INCLUDED.filter(x => x.tag && $(x.id).checked && (!x.phases || x.phases.includes(S.phase)));
-  if (perks.length) L.push(`Member perk: ${perks.map(x => x.desc.replace("you're", "they're").replace("your family", "their family")).join(" ")}`);
+  if (perks.length) L.push(`Member perk: ${perks.map(x => x.desc.replace("you're", "they're").replace("your immediate family", "their immediate family")).join(" ")}`);
   const bonuses = INCLUDED.filter(x => x.value && $(x.id).checked && (!x.phases || x.phases.includes(S.phase)));
   if (bonuses.length) L.push(`Bonus: ${bonuses.map(x => `${x.name}, ${x.desc.toLowerCase().replace(/\.$/, "")} (${money(x.value)} value)`).join("; ")}`);
   L.push(`Visits: ${c.visits}${c.nProg ? ` · Progress exam${c.nProg > 1 ? "s" : ""} at visit ${c.progAt.join(" & ")}` : ""} · Re-exam after visit ${c.visits}`);

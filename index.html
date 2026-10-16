@@ -421,7 +421,22 @@ body.kids #p1 .who h2 { font-family: "Patrick Hand", "Comic Sans MS", cursive; f
 
 /* Print layout. body.pv is switched on just before printing (and while measuring),
    so the sizes here are what lands on letter paper: 7.6in × 10.1in inside 0.45in margins. */
-body.pv .paper { width: 7.6in; max-width: none; padding: 0; box-shadow: none; border-radius: 0; gap: 16px; margin: 0; }
+body.pv .paper { width: 7.1in; max-width: none; padding: 0; box-shadow: none; border-radius: 0; gap: 12px; margin: 0; }
+/* tighter print spacing so pages fit at (or near) full size inside the wider margins */
+body.pv .mast { padding-bottom: 8px; }
+body.pv .who h2 { font-size: 28px; }
+body.pv .journey { gap: 4px; }
+body.pv .sec { gap: 7px; }
+body.pv .weeks { padding-top: 13px; }
+body.pv .wk .d { height: 28px; }
+body.pv .plan td { padding: 3px 0; }
+body.pv .cmp td { padding-block: 6px; }
+body.pv .incl { gap: 5px; padding-top: 8px; }
+body.pv .incl-row div { font-size: 11.5px; }
+body.pv .incl-row b { font-size: 12.5px; }
+body.pv .promise { gap: 7px; }
+body.pv .tier ul, body.pv .tg-row .sub p { gap: 3px; }
+body.pv .init div { height: 26px; }
 body.pv .mast { padding-bottom: 12px; }
 body.pv .logo img { height: 36px; }
 body.pv .who h2 { font-size: 30px; }
@@ -464,7 +479,7 @@ body.pv .sch th b { font-size: 11px; }
 body.pv .pol { font-size: 10px; line-height: 1.38; }
 body.pv .pol li { margin-bottom: 5px; }
 
-@page { size: letter; margin: 0.45in; }
+@page { size: letter; margin: 0.4in 0.7in; }   /* 0.7in sides, 0.4in top and bottom */
 @media print {
   html, body, .app, .desk { background: #fff !important; }
   .paper { background: #fff; }
@@ -727,9 +742,10 @@ drawBreaks();
 $("f").addEventListener("input", e => { if (/^pa\d$/.test(e.target.id)) S.progManual = true; render(); });
 $("f").addEventListener("submit", e => e.preventDefault());
 // Before printing: switch to the print layout and shrink any page that would not fit on one
-// letter sheet (10.1in of height inside the margins), so a plan is always exactly two pages.
+// letter sheet (10in of height inside the margins), so a plan is always exactly two pages.
 // A shrunk page is laid out wider first, so after shrinking it still spans the full 7.6in.
-const PAGE_W_IN = 7.6, PAGE_H = 10.1 * 96 - 6;
+const MARGIN_X = 0.7, MARGIN_Y = 0.4;           // inches; matches @page above
+const PAGE_W_IN = 8.5 - 2 * MARGIN_X, PAGE_H = (11 - 2 * MARGIN_Y) * 96 - 6;
 function fitPages() {
   document.body.classList.add("pv");
   document.querySelectorAll(".paper:not([hidden])").forEach(p => {
@@ -794,7 +810,7 @@ $("print").onclick = () => { fitPages(); window.print(); };
 async function buildPdf() {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ unit: "in", format: "letter" });
-  const M = 0.45;
+  const M = MARGIN_X;
   document.body.classList.add("pv");
   try {
     const pages = [...document.querySelectorAll(".paper:not([hidden])")];
@@ -808,9 +824,9 @@ async function buildPdf() {
         p.style.width = `${(PAGE_W_IN / z).toFixed(3)}in`;
       }
       const canvas = await html2canvas(p, { scale: 3, backgroundColor: "#ffffff", logging: false });
-      const hIn = Math.min(canvas.height / canvas.width * PAGE_W_IN, 10.1);
+      const hIn = Math.min(canvas.height / canvas.width * PAGE_W_IN, 11 - 2 * MARGIN_Y);
       if (i) pdf.addPage();
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", M, M, PAGE_W_IN, hIn);
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", M, MARGIN_Y, PAGE_W_IN, hIn);
     }
   } finally {
     unfitPages();

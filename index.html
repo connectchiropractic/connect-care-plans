@@ -134,8 +134,9 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .stop.now { color: var(--ink); }
 .stop.skip { color: var(--faint); font-weight: 600; }
 .stop.skip i { border-style: dashed; }
-.stop .notsel { font: 600 10px var(--body); color: var(--faint); box-shadow: inset 0 0 0 1px var(--rule); border-radius: 999px; padding: 2px 7px; }
-.stop.now i { width: 18px; height: 18px; border: 2px solid var(--green); box-shadow: inset 0 0 0 3px var(--paper); background: var(--green); }
+.stop .notsel { font: 600 10px var(--body); color: var(--faint); border: 1px solid var(--rule); border-radius: 999px; padding: 1px 6px; }
+.stop.now i { width: 18px; height: 18px; border: 2px solid var(--green); background: var(--paper); position: relative; }
+.stop.now i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 .stop .here { font: 700 9px var(--body); letter-spacing: .14em; text-transform: uppercase; background: var(--green); color: #fff; padding: 3px 8px; border-radius: 999px; }
 .link { flex: 1; min-width: 14px; height: 2px; background: repeating-linear-gradient(90deg, var(--rule) 0 5px, transparent 5px 9px); }
 .link.done { background: var(--green); }
@@ -334,7 +335,7 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .tier .was { font: 600 12px var(--body); color: var(--soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 22px; }
 .tier .was s { color: var(--faint); }
 .pill { font: 700 11px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 2px 8px; }
-.pill.quiet { background: none; color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.pill.quiet { background: none; color: var(--green); border: 1px solid var(--green); }
 .tier ul { margin: 4px 0 0; padding: 10px 0 0; border-top: 1px solid var(--rule); list-style: none; display: grid; gap: 6px; font-size: 12.5px; color: var(--soft); flex: 1; align-content: start; }
 .tier li { padding-left: 14px; position: relative; }
 .tier li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
@@ -404,8 +405,9 @@ body.kids #p1 .who h2 { font-family: "Patrick Hand", "Comic Sans MS", cursive; f
 .tier li { padding-left: 0; }
 .tier li::before { display: none; }
 .tick { border-top: 0; padding-top: 4px; color: var(--ink); }
-.pill.quiet { background: none; color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); padding: 2px 8px; font-weight: 700; }
-.pill.quiet.cardfee { color: var(--soft); box-shadow: inset 0 0 0 1.5px var(--soft); }
+/* outlines are real borders (not inset shadows) so the Save PDF builder draws them correctly */
+.pill.quiet { background: none; color: var(--green); border: 1.5px solid var(--green); box-shadow: none; padding: .5px 6.5px; font-weight: 700; }
+.pill.quiet.cardfee { color: var(--soft); border-color: var(--soft); }
 .commit { border-left: 0; padding-left: 0; font-size: 14px; }
 .ex { border: 0; border-left: 2px solid var(--rule); border-radius: 0; padding: 4px 0 4px 12px; }
 .sch td { border-top: 0; }

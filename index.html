@@ -296,6 +296,10 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .plan td { border-bottom: 0; padding: 5px 0; }
 .plan tbody tr:first-child td { padding-top: 0; }
 .wk { border: 0; padding: 2px 0; }
+.weeks { padding-top: 16px; row-gap: 20px; }
+.mk:last-child span { left: auto; right: 0; transform: none; }
+.mk { flex: 0 0 1.5px; align-self: stretch; background: var(--ink); position: relative; margin: 0 2px; }
+.mk span { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 3px; font: 600 9.5px var(--body); color: var(--ink); white-space: nowrap; }
 .wk.off { border: 0; }
 .pr-item { border: 0; padding: 2px 0; }
 .promise .small { border-top: 0; padding-top: 0; }
@@ -630,7 +634,13 @@ function render() {
   $("pays").innerHTML = `<div class="ph2"><b></b><span></span><span>Charge</span></div>` +
     c.pays.map((p, i) => `<div><b>${i + 1}</b><span>${i === 0 ? "In office" : long(p.date)}</span><span class="num">${money(p.amt)}</span></div>`).join("") + `<p class="paynote">Card payments: charge these amounts. The card machine adds the ${CARD_FEE}% fee itself, so never add it by hand.</p>`;
 
-  const weekCells = c.schedule.map((v, i) => `<div class="wk ${v ? "" : "e"}" title="Week ${i + 1}"><span class="d">${"<i></i>".repeat(v)}</span><span class="n">${i + 1}</span></div>`);
+  // Exam markers: a thin line after the week in which each progress exam falls, and one after the last week.
+  const mark = label => `<div class="mk" title="${label}"><span>${label}</span></div>`;
+  const examAfter = {};
+  let cumV = 0;
+  c.schedule.forEach((v, i) => { const from = cumV; cumV += v; c.progAt.forEach(p => { if (p > from && p <= cumV) examAfter[i] = "Progress exam"; }); });
+  examAfter[c.schedule.length - 1] = "Re-exam";
+  const weekCells = c.schedule.map((v, i) => `<div class="wk ${v ? "" : "e"}" title="Week ${i + 1}"><span class="d">${"<i></i>".repeat(v)}</span><span class="n">${i + 1}</span></div>${examAfter[i] ? mark(examAfter[i]) : ""}`);
   if (c.brkW) weekCells.splice(c.brkAt, 0, ...Array.from({ length: c.brkW }, () => `<div class="wk off" title="Office closed"><span class="d"></span><span class="n">—</span></div>`));
   const weeksHtml = weekCells.join("");
   const brkNote = c.brkW ? `<p class="brk-note"><i></i>Office closed ${shortDate(c.brkDate)} – ${shortDate(addDays(c.brkDate, c.brkW * 7 - 1))} (${c.brkW} week${c.brkW > 1 ? "s" : ""}). Your time frame includes this break.</p>` : "";

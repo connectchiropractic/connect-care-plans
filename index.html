@@ -253,6 +253,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp th:first-child, .cmp td:first-child { text-align: left; padding-left: 0; }
 .cmp td { text-align: right; padding: 9px 0 9px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap; vertical-align: middle; }
 .cmp td:first-child { white-space: normal; font-weight: 700; color: var(--ink); }
+.cmp tr.cur td { background: var(--mint2); }
 .cmp td.save { color: var(--green); font-weight: 800; }
 .cmp th small s { color: var(--faint); }
 .cmp td small { display: block; font-weight: 600; font-size: 11px; color: var(--green); }
@@ -530,6 +531,7 @@ body.pv .pol li { margin-bottom: 5px; }
 
     <section class="step"><h2><b>7</b>Note for the patient file</h2>
       <div class="lbl">Patient chose</div>
+      <div id="pickBox" class="cmpbox"></div>
       <div class="chips" id="choice"></div>
       <textarea id="note" rows="14" readonly aria-label="Note for the patient file"></textarea>
       <button type="button" class="btn go" id="copyNote">Copy note</button>
@@ -611,7 +613,7 @@ const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the 
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
 
 /* ---------- state ---------- */
-const S = { choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
+const S = { cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const money = v => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
@@ -634,33 +636,45 @@ function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
     it => { S.audience = it.v; $("inKG").checked = it.v === "Kids"; document.body.classList.toggle("kids", it.v === "Kids"); });
   chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
-      const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : [];
+      const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.cur = -1; S.pick = -1;
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
       else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
   drawBands();
   drawCompare();
 }
+// Optimize / Maintenance: what they're on now (optional), and the frequencies they're considering.
+// The plan's frequency (for fees, dates and the file note) is the one they choose, else the current one,
+// else the first one they're considering.
+const INTERVALS = FREQS.map((f, q) => q).filter(q => FREQS[q][1].startsWith("Every "));
+function considered() { return [...new Set([...S.cmp, ...(S.cur >= 0 ? [S.cur] : [])])].sort((x, y) => x - y); }
+function syncPlanFreq() {
+  const set = considered();
+  if (!set.includes(S.pick)) S.pick = -1;
+  const q = S.pick >= 0 ? S.pick : S.cur >= 0 ? S.cur : set[0];
+  if (q !== undefined) S.bands[0].q = q;
+}
 function drawCompare() {
   const cmp = COMPARE[S.phase];
   $("bands").hidden = $("addBand").hidden = !!cmp;
   if (!cmp) { $("cmpBox").innerHTML = ""; return; }
-  // Any day-interval frequency can be the plan or a comparison; the phase's usual pair starts ticked.
-  const b = S.bands[0], all = FREQS.map((f, q) => q).filter(q => FREQS[q][1].startsWith("Every "));
+  const b = S.bands[0];
   $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips">${TIMEFRAMES.map(t =>
       `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
-    <div class="lbl">Plan frequency</div><div class="chips">${all.map(q =>
-      `<button type="button" class="chip" data-pq="${q}" aria-pressed="${b.q === q}">${FREQS[q][1].replace(/ \(.*\)/, "")}</button>`).join("")}</div>
-    <div class="lbl">Also compare on page 1</div>${all.filter(q => q !== b.q).map(q =>
-      `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}`;
+    <label>Current frequency<select id="curFreq"><option value="-1">Not on a set frequency yet</option>${INTERVALS.map(q =>
+      `<option value="${q}" ${S.cur === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
+    <div class="lbl">Frequencies they're considering</div>${INTERVALS.filter(q => q !== S.cur).map(q =>
+      `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}
+    <p class="hint">Their current frequency is always shown and highlighted on the plan. Record what they choose in the last step.</p>`;
 }
 $("cmpBox").addEventListener("click", e => {
-  const t = e.target.closest("[data-tw],[data-pq]"); if (!t) return;
-  if (t.dataset.tw) S.bands[0].w = +t.dataset.tw;
-  if (t.dataset.pq) { const q = +t.dataset.pq; S.bands[0].q = q; if (!S.cmp.includes(q)) S.cmp = [...S.cmp, q].sort(); }
-  drawCompare(); render();
+  const t = e.target.closest("[data-tw]"); if (!t) return;
+  S.bands[0].w = +t.dataset.tw; drawCompare(); render();
 });
-$("cmpBox").addEventListener("change", e => { const q = +e.target.dataset.cq; if (isNaN(q)) return;
-  S.cmp = e.target.checked ? [...S.cmp, q].sort() : S.cmp.filter(x => x !== q || x === S.bands[0].q); render(); });
+$("cmpBox").addEventListener("change", e => {
+  if (e.target.id === "curFreq") { S.cur = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.cur); syncPlanFreq(); drawCompare(); render(); return; }
+  const q = +e.target.dataset.cq; if (isNaN(q)) return;
+  S.cmp = e.target.checked ? [...S.cmp, q] : S.cmp.filter(x => x !== q); syncPlanFreq(); render();
+});
 function drawBands() {
   $("bands").innerHTML = S.bands.map((b, i) => `<div class="band">
       <select id="bf${i}" data-i="${i}" data-k="q" aria-label="Band ${i + 1} frequency">${FREQS.map(([, t], qi) => `<option value="${qi}" ${qi === b.q ? "selected" : ""}>${t}</option>`).join("")}</select>
@@ -735,13 +749,13 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick
   }));
 }
 function loadPlanCode(code) {
   const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
   if (d.p === "Maintain") d.p = "Maintenance";   // codes made before the rename
-  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full" });
+  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1 });
   $("start").value = d.s; $("cc").checked = !!d.cc; $("nProg").value = String(d.np);
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
@@ -756,6 +770,8 @@ $("loadCode").onclick = () => {
   try { loadPlanCode($("planCode").value); $("codeMsg").textContent = "Plan reopened. Type the patient's name."; $("last").focus(); }
   catch { $("codeMsg").textContent = "That code didn't work. Copy the whole line starting with CP1- from the file note."; }
 };
+$("pickBox").addEventListener("click", e => { const b = e.target.closest("[data-pk]"); if (!b) return;
+  const q = +b.dataset.pk; S.pick = S.pick === q ? -1 : q; syncPlanFreq(); render(); });
 $("choice").addEventListener("click", e => { const b = e.target.closest("[data-ch]"); if (b) { S.choice = b.dataset.ch; render(); } });
 $("copyNote").onclick = async () => {
   const b = $("copyNote");
@@ -915,10 +931,10 @@ function compute() {
   const exPaid = pays.filter(p => p.date < exCut);
   // Frequency comparison (Optimize / Maintenance): the same weeks, exams and price at each frequency.
   const nPay = n;
-  const cmpSet = COMPARE[S.phase] ? [...new Set([...S.cmp, S.bands[0].q])].sort() : [];
+  const cmpSet = COMPARE[S.phase] ? (considered().length ? considered() : [S.bands[0].q]) : [];
   const cmpRows = cmpSet.length ? cmpSet.map(q => {
     const v = Math.ceil(weeks * FREQS[q][0] - 1e-9), fee = r2((v + nProg + 1) * price);
-    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), ppv: r2((v + nProg + 1) * PRICE_FULL), shown: S.bands.length === 1 && S.bands[0].q === q };
+    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur };
   }) : [];
   return { cmpRows, nPay, planOnly, stdTotal, collSave, brkW, breaks, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
 }
@@ -990,6 +1006,8 @@ function render() {
   $("priceWhy").textContent = !c.fullPricePhase ? `Connect Collective pricing applies to every ${S.phase} plan` : c.collective ? "Connect Collective" : "Standard Reconnect price";
   const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));
   if (!offer.some(([v]) => v === S.choice)) S.choice = "full";
+  $("pickBox").innerHTML = c.cmpRows.length > 1 ? `<div class="lbl">Frequency chosen</div><div class="chips">${c.cmpRows.map(r =>
+    `<button type="button" class="chip" data-pk="${r.q}" aria-pressed="${S.bands[0].q === r.q && (S.pick === r.q || (S.pick < 0 && false))}">${r.label.replace(/ \(.*\)/, "")}</button>`).join("")}</div>` : "";
   $("choice").innerHTML = offer.map(([v, t]) => `<button type="button" class="chip" data-ch="${v}" aria-pressed="${v === S.choice}">${t}</button>`).join("");
   $("note").value = fileNote(c, full, S.audience === "Kids") + `\n\nPlan code (paste into the Connect Care Plan Maker to reopen this plan):\n${planCode()}`;
   $("pays").innerHTML = `<div class="ph2"><b></b><span></span><span>Charge</span></div>` +
@@ -1053,7 +1071,7 @@ function render() {
       <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), re-examination included</span></div>
       <table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)} per visit${c.collSave ? " · Connect Collective" : ""}</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th>${c.collSave ? "<th>Member savings</th>" : ""}<th></th></tr></thead>
-        <tbody>${c.cmpRows.map(r => `<tr><td>${r.label}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.collSave ? `<td class="save">${money(r.ppv - r.fee)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <tbody>${c.cmpRows.map(r => `<tr class="${r.current ? "cur" : ""}"><td>${r.label}${r.current ? `<small>Current frequency</small>` : ""}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.collSave ? `<td class="save">${money(r.ppv - r.fee)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
     </section>` : ""}
 

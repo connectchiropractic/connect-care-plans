@@ -161,11 +161,18 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .fee span { font: 700 11px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--green); }
 .fee b { font: 800 32px/1 var(--display); letter-spacing: -.022em; color: var(--ink); }
 
-.promise { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; border: 1.5px solid var(--green); border-radius: 10px; padding: 18px 20px; color: var(--green); }
-.promise h3 { margin: 0 0 4px; font: 700 19px var(--display); letter-spacing: -.022em; color: var(--ink); }
-.promise p, .promise ul { margin: 0 0 6px; font-size: 13.5px; color: var(--ink); }
-.promise ul { padding-left: 18px; }
-.promise .small { font-size: 11.5px; color: var(--soft); margin: 8px 0 0; }
+.promise { display: grid; gap: 14px; border: 2px solid var(--green); border-radius: 12px; padding: 20px 22px 16px; }
+.pr-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.pr-head .seal { color: var(--green); }
+.promise h3 { margin: 0 0 2px; font: 800 21px var(--display); letter-spacing: -.022em; color: var(--ink); }
+.promise p { margin: 0; font-size: 13.5px; color: var(--ink); }
+.pr-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.pr-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; font: 700 14px/1.35 var(--display); letter-spacing: -.01em; color: var(--ink); }
+.pr-item i { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--green); color: var(--green); display: grid; place-items: center; font: 900 12px var(--body); font-style: normal; }
+.pr-item em { font-style: normal; color: var(--green); }
+.pr-and { align-self: center; font: 700 10px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--green); }
+.promise .small { font-size: 11px; color: var(--soft); border-top: 1px solid var(--rule); padding-top: 10px; }
+@media (max-width: 600px) { .pr-pair { grid-template-columns: minmax(0, 1fr); } .pr-and { justify-self: center; } }
 .imp { display: block; margin-top: 6px; }
 .bc { border: 1px solid var(--rule); border-left: 4px solid var(--c); border-radius: 6px; padding: 10px 14px; display: grid; gap: 2px; }
 .bc b { font: 500 16px var(--display); color: var(--c); }
@@ -287,8 +294,9 @@ body.pv .plan td { padding: 5px 0; }
 body.pv .wk .d { height: 33px; }
 body.pv .fee { padding: 12px 18px; }
 body.pv .fee b { font-size: 26px; }
-body.pv .promise { padding: 14px 16px; }
-body.pv .promise p, body.pv .promise ul { font-size: 12px; }
+body.pv .promise { padding: 14px 16px 12px; gap: 10px; }
+body.pv .pr-item { padding: 9px 12px; font-size: 13px; }
+body.pv .promise p { font-size: 12px; }
 body.pv .init { padding-top: 0; }
 body.pv .init div { height: 30px; }
 body.pv .tiers { gap: 10px; }
@@ -629,13 +637,17 @@ function render() {
     </section>
 
     ${S.phase === PROMISE_PHASE && c.nProg ? `<section class="promise">
-      <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6l-8-3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <div>
-        <h3>Connect Care Promise</h3>
-        <p>By the first Progress Examination, if you feel the experience hasn't been valuable, we will:</p>
-        <ul><li>Refund your full unused balance, <b>and</b></li><li>Credit 100% of what you've invested toward another licensed provider of your choice.</li></ul>
-        <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at the standard per-visit rate. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
+      <div class="pr-head">
+        <svg class="seal" width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6l-8-3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><h3>Connect Care Promise</h3>
+        <p>By the first Progress Examination, if you feel the experience hasn't been valuable, we will:</p></div>
       </div>
+      <div class="pr-pair">
+        <div class="pr-item"><i aria-hidden="true">✓</i><span>Refund your full unused balance</span></div>
+        <b class="pr-and">and</b>
+        <div class="pr-item"><i aria-hidden="true">✓</i><span>Credit <em>100%</em> of what you've invested toward another licensed provider of your choice.</span></div>
+      </div>
+      <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at the standard per-visit rate. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
     <div class="init"><div><span>Client initials</span></div><div><span>Doctor initials</span></div></div>

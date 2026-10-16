@@ -1268,6 +1268,8 @@ function render() {
 drawForm(); render();
 // ---- Staff PIN. Only a fingerprint (SHA-256) of the PIN is kept here, never the PIN itself.
 // To change the PIN, replace PIN_HASH with the SHA-256 of "connect-careplans:" + the new PIN.
+// Staff PIN screen on/off. Set to true to turn it back on (the PIN itself is unchanged).
+const PIN_ENABLED = false;
 const PIN_HASH = "40ad2823c79c42d977230348f1be63ea249fbc9197864cd16597710711c92c0b";
 const UNLOCK_KEY = "connect-careplans-unlocked", UNLOCK_DAYS = 30;
 async function sha256(t) {
@@ -1276,6 +1278,7 @@ async function sha256(t) {
 }
 function unlock() { document.body.classList.remove("locked"); }
 (function initLock() {
+  if (!PIN_ENABLED) { unlock(); return; }
   $("lockLogo").innerHTML = `<img src="${LOGO_ADULT}" alt="Connect Chiropractic">`;
   try {
     const saved = JSON.parse(localStorage.getItem(UNLOCK_KEY) || "null");

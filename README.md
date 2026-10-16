@@ -22,3 +22,15 @@ and it appears on the bank instalment option automatically.
 
 Same as the meal plan app: commit, then **Push origin** in GitHub Desktop.
 GitHub Pages publishes within a minute or two.
+
+## Staff PIN
+
+The maker opens behind a staff PIN screen. Each computer stays unlocked for
+30 days. Only a SHA-256 fingerprint of the PIN is in `index.html` (`PIN_HASH`),
+never the PIN itself. To change the PIN, replace `PIN_HASH` with the SHA-256 of
+`connect-careplans:` followed by the new PIN, for example:
+
+    printf 'connect-careplans:NEWPIN' | shasum -a 256
+
+This keeps casual visitors out. It is not strong security, and the maker holds
+no patient information.

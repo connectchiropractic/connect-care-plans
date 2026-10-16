@@ -267,6 +267,8 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .tiers.grouped.one { grid-template-columns: minmax(0, 340px); }
 /* line Option 1's price up with Option 2's: same top spacing, no reserved label height */
 .tiers.grouped .tier .t { min-height: 0; }
+.tiers.grouped .tier .tick { margin-bottom: 9px; }   /* level with the A and B tick boxes inside Option 2 */
+body.pv .tiers.grouped .tier .tick { margin-bottom: 7px; }
 .tiers.grouped .tgroup { padding-top: 24px; }
 body.pv .tiers.grouped .tgroup { padding-top: 18px; }
 .tgroup { border: 1px solid var(--rule); border-radius: 10px; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 6px; }

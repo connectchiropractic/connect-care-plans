@@ -356,8 +356,8 @@ body.kids #p1 .who h2 { font-family: "Patrick Hand", "Comic Sans MS", cursive; f
 .tier li { padding-left: 0; }
 .tier li::before { display: none; }
 .tick { border-top: 0; padding-top: 4px; color: var(--ink); }
-.pill.quiet { box-shadow: none; padding: 0; color: var(--soft); font-weight: 600; }
-.pill.quiet::before { content: "· "; }
+.pill.quiet { background: none; color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); padding: 2px 8px; font-weight: 700; }
+.pill.quiet.cardfee { color: var(--soft); box-shadow: inset 0 0 0 1.5px var(--soft); }
 .commit { border-left: 0; padding-left: 0; font-size: 14px; }
 .ex { border: 0; border-left: 2px solid var(--rule); border-radius: 0; padding: 4px 0 4px 12px; }
 .sch td { border-top: 0; }
@@ -1043,7 +1043,7 @@ function render() {
       <div class="tier">
         <span class="t"><span class="ccl">VISA · MC · AMEX</span>Option 2B · Instalments by card</span>
         <div class="amt num">${money(c.pays[0].amt)}<small>× ${c.n}</small></div>
-        <div class="was num">Total ${money(c.total)}<span class="pill quiet">+ ${CARD_FEE}%</span></div>
+        <div class="was num">Total ${money(c.total)}<span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span></div>
         <ul>
           <li class="num">Charged in office on the same dates. The card machine adds the ${CARD_FEE}% fee (about ${money(cardFee)} total)</li>
           <li><b>The card fee can't be claimed on insurance</b></li>

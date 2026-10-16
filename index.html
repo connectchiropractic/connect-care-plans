@@ -400,7 +400,9 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .pill.bonus { font-size: 10px; padding: 1px 7px; white-space: nowrap; display: table; margin: 3px 0 1px; }
 .incl-row div { overflow-wrap: anywhere; }
 .pill.bonus.inl { display: inline-block; margin: 0 0 0 6px; vertical-align: 1px; }
-#inNMwrap[hidden], #inFPwrap[hidden], #inPHwrap[hidden], #inMPwrap[hidden], #inKGwrap[hidden], #ageWrap[hidden] { display: none; }
+#inNMwrap[hidden], #inFPwrap[hidden], #inPHwrap[hidden], #inMPwrap[hidden], #inKGwrap[hidden] { display: none; }
+.cc.kgq { border: 1.5px solid var(--green); background: var(--mint2); }
+.cc.kgq > span { font-weight: 700; }
 .lbl { font: 600 12px var(--ui); color: var(--soft); margin-top: 4px; }
 @media (max-width: 600px) { .incl-row { grid-template-columns: minmax(0, 1fr); } }
 /* Connect Kids plans: the Kids logo, and the child's name in a hand-lettered face that matches it */
@@ -541,7 +543,6 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       </div>
       <div class="two">
         <label>First visit<input id="start" type="date"></label>
-        <label id="ageWrap">Child's age (years)<input id="childAge" type="number" min="0" max="17" step="1" placeholder="e.g. 2"></label>
       </div>
     </section>
 
@@ -575,12 +576,11 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
     </section>
 
     <section class="step"><h2><b>6</b>Included &amp; bonuses</h2>
+      <label class="cc kgq" id="inKGwrap"><input type="checkbox" id="inKG"> <span>Child 3 or under? Add the Connect Kids Milestone Guide<small>Tick this for children aged 3 and under</small></span></label>
       <label class="cc" id="inPHwrap"><input type="checkbox" id="inPH" checked> <span>PracticeHub app<small>Reminders, calendar sync, exercise library, mobility tests</small></span></label>
       <label class="cc" id="inMPwrap"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
-      <label class="cc" id="inKGwrap"><input type="checkbox" id="inKG"> <span>Connect Kids Milestone Guide<small>Children 3 and under; added automatically from the child's age</small></span></label>
       <label class="cc" id="inNMwrap"><input type="checkbox" id="inNM"> <span>Bonus: Neuro Movement session with Tyler<small>Complimentary 30 minutes, $90 value</small></span></label>
       <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their immediate family gets Connect Collective pricing while they're active</small></span></label>
-      <p class="hint" id="kgHint"></p>
     </section>
 
     <section class="step"><h2><b>7</b>Payments</h2>
@@ -693,12 +693,8 @@ function chips(el, items, isOn, onPick) {
   el.onclick = e => { const b = e.target.closest("button"); if (b) { onPick(items[+b.dataset.i], +b.dataset.i); drawForm(); render(); } };
 }
 // Adult Rebuild plans get the Neuro Movement session with Tyler automatically (the CA can still untick it).
-// The Kids Milestone Guide is for children 3 and under; it is added automatically from the child's age.
-const MILESTONE_MAX_AGE = 3;
-const childAge = () => { const v = $("childAge").value.trim(); return v === "" ? null : +v; };
-const guideEligible = () => S.audience === "Kids" && childAge() !== null && childAge() <= MILESTONE_MAX_AGE;
-function autoGuide() { $("inKG").checked = guideEligible(); }
-$("childAge").addEventListener("input", autoGuide);
+// The Kids Milestone Guide (children 3 and under) is offered on Kids plans; the CA ticks it when it applies.
+function autoGuide() { if (S.audience !== "Kids") $("inKG").checked = false; }
 const AUTO_BONUS = { id: "inNM", phase: "Rebuild", audience: "Adult" };
 function autoBonus() { $(AUTO_BONUS.id).checked = S.phase === AUTO_BONUS.phase && S.audience === AUTO_BONUS.audience; }
 function drawForm() {
@@ -836,7 +832,7 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, ag: $("childAge").value
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick
   }));
 }
 function loadPlanCode(code) {
@@ -847,7 +843,6 @@ function loadPlanCode(code) {
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
   drawBreaks();
-  $("childAge").value = d.ag ?? "";
   INCLUDED.forEach((x, i) => $(x.id).checked = !!d.in[i]);
   if (d.pa) { $("pa0").value = d.pa[0]; $("pa1").value = d.pa[1]; S.progManual = true; } else S.progManual = null;
   S.progSig = JSON.stringify([S.bands, d.np]);
@@ -1127,10 +1122,8 @@ function render() {
   const brkNote = c.brkW ? `<p class="brk-note"><i>${hatch(14, 10, 4)}</i>Office closed ${c.breaks.map(b => `${shortDate(b.date)} – ${shortDate(addDays(b.date, b.w * 7 - 1))}`).join(" and ")}. Your time frame includes ${c.breaks.length > 1 ? "these breaks" : "this break"}.</p>` : "";
   const stops = journeyStops(S.phase), jIdx = stops.findIndex(j => j.name === S.phase);
   const inclOK = x => !x.phases || x.phases.includes(S.phase);
-  $("ageWrap").hidden = S.audience !== "Kids";
-  $("inKGwrap").hidden = !guideEligible();
-  if (!guideEligible()) $("inKG").checked = false;
-  $("kgHint").textContent = S.audience !== "Kids" ? "" : childAge() === null ? "Enter the child's age in step 2 to see if the Milestone Guide applies." : guideEligible() ? "" : `The Milestone Guide is for children ${MILESTONE_MAX_AGE} and under.`;
+  $("inKGwrap").hidden = S.audience !== "Kids";
+  if (S.audience !== "Kids") $("inKG").checked = false;
   const isBonus = x => (x.bonusIn || []).includes(S.phase);   // always included, marked Bonus
   INCLUDED.filter(x => x.phases || x.bonusIn).forEach(x => $(x.id + "wrap").hidden = !inclOK(x) || isBonus(x));
   const incl = INCLUDED.filter(x => (isBonus(x) || $(x.id).checked) && inclOK(x));

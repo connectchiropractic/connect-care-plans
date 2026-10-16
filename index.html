@@ -354,8 +354,9 @@ body.pv .signoff { font-size: 26px; }
 .incl-row { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 6px 28px; }
 .incl-row div { display: grid; gap: 1px; font-size: 12.5px; color: var(--soft); }
 .incl-row b { font: 700 13.5px var(--body); color: var(--ink); }
-.pill.bonus { font-size: 10px; padding: 1px 7px; margin-left: 4px; vertical-align: 1px; white-space: nowrap; }
-#inNMwrap[hidden] { display: none; }
+.pill.bonus { font-size: 10px; padding: 1px 7px; white-space: nowrap; display: table; margin: 3px 0 1px; }
+.incl-row div { overflow-wrap: anywhere; }
+#inNMwrap[hidden], #inFPwrap[hidden] { display: none; }
 .lbl { font: 600 12px var(--ui); color: var(--soft); margin-top: 4px; }
 @media (max-width: 600px) { .incl-row { grid-template-columns: minmax(0, 1fr); } }
 /* Connect Kids plans: the Kids logo, and the child's name in a hand-lettered face that matches it */
@@ -485,6 +486,7 @@ body.pv .pol li { margin-bottom: 5px; }
       <label class="cc"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
       <label class="cc"><input type="checkbox" id="inKG"> <span>Connect Kids Milestone Guide<small>For children: tick when the patient is a child</small></span></label>
       <label class="cc" id="inNMwrap"><input type="checkbox" id="inNM"> <span>Bonus: Neuro Movement session with Tyler<small>Complimentary 30 minutes, $90 value</small></span></label>
+      <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their family gets Connect Collective pricing while they're active</small></span></label>
     </section>
 
     <section class="step"><h2><b>6</b>Payments</h2>
@@ -541,7 +543,9 @@ const INCLUDED = [
   { id: "inMP", name: "Connect Meal Plan", desc: "Custom healthy meals built around your local grocery store and what's on sale. mealplan.connectchiropractic.com" },
   { id: "inKG", name: "The Complete Connect Kids Milestone Guide", desc: "Exercises and activities to do with your child every day, through each stage of development." },
   // A bonus the CA can add on Rebuild, Optimize and Maintenance plans.
-  { id: "inNM", name: "Neuro Movement session with Tyler", desc: "A complimentary 30-minute session.", value: 90, phases: ["Rebuild", "Optimize", "Maintenance"] }
+  { id: "inNM", name: "Neuro Movement session with Tyler", desc: "A complimentary 30-minute session.", value: 90, phases: ["Rebuild", "Optimize", "Maintenance"] },
+  // Member perk: like employee pricing, the member's family gets Collective pricing while they stay active.
+  { id: "inFP", name: "Connect Collective pricing for your family", desc: "While you're an active member, your family members get Connect Collective pricing too.", tag: "Member perk", phases: ["Rebuild", "Optimize", "Maintenance"] }
 ];
 // Optimize and Maintenance: the patient chooses between a few visit frequencies, shown side by side.
 // Values are FREQS positions: 4 = 5–7 days, 5 = 8–10 days, 6 = 10–14 days, 7 = 18–21 days, 8 = 25–28 days.
@@ -895,6 +899,8 @@ function fileNote(c, name, kid) {
   L.push(`Phase: ${S.phase}`);
   L.push(`Visit frequency: ${freq}`);
   L.push(`Time frame: ${d(c.start)} – ${d(c.end)} (${c.weeks} weeks${c.brkW ? `, plus ${c.brkW} week${c.brkW > 1 ? "s" : ""} office closure: ${c.breaks.map(b => `${d(b.date)} for ${b.w} wk${b.w > 1 ? "s" : ""}`).join("; ")}` : ""})`);
+  const perks = INCLUDED.filter(x => x.tag && $(x.id).checked && (!x.phases || x.phases.includes(S.phase)));
+  if (perks.length) L.push(`Member perk: ${perks.map(x => x.desc.replace("you're", "they're").replace("your family", "their family")).join(" ")}`);
   const bonuses = INCLUDED.filter(x => x.value && $(x.id).checked && (!x.phases || x.phases.includes(S.phase)));
   if (bonuses.length) L.push(`Bonus: ${bonuses.map(x => `${x.name}, ${x.desc.toLowerCase().replace(/\.$/, "")} (${money(x.value)} value)`).join("; ")}`);
   L.push(`Visits: ${c.visits}${c.nProg ? ` · Progress exam${c.nProg > 1 ? "s" : ""} at visit ${c.progAt.join(" & ")}` : ""} · Re-exam after visit ${c.visits}`);
@@ -958,7 +964,7 @@ function render() {
   const brkNote = c.brkW ? `<p class="brk-note"><i></i>Office closed ${c.breaks.map(b => `${shortDate(b.date)} – ${shortDate(addDays(b.date, b.w * 7 - 1))}`).join(" and ")}. Your time frame includes ${c.breaks.length > 1 ? "these breaks" : "this break"}.</p>` : "";
   const stops = journeyStops(S.phase), jIdx = stops.findIndex(j => j.name === S.phase);
   const inclOK = x => !x.phases || x.phases.includes(S.phase);
-  $("inNMwrap").hidden = !inclOK(INCLUDED.find(x => x.id === "inNM"));
+  INCLUDED.filter(x => x.phases).forEach(x => $(x.id + "wrap").hidden = !inclOK(x));
   const incl = INCLUDED.filter(x => $(x.id).checked && inclOK(x));
   const journey = `<section class="journey" aria-label="Your care journey"><div class="jhead"><span>${Whose} journey · The Connect Care Process™</span></div>
     <div class="path">${stops.map((j, i) => `${i ? `<span class="link ${i <= jIdx ? "done" : ""}"></span>` : ""}<span class="stop ${j.skip ? "skip" : i < jIdx ? "done" : i === jIdx ? "now" : "next"}"><i>${i < jIdx && !j.skip ? "✓" : ""}</i>${j.name}${i === jIdx ? `<span class="here">You are here</span>` : ""}${j.skip ? `<span class="notsel">Not selected</span>` : ""}</span>`).join("")}</div></section>`;
@@ -1033,7 +1039,7 @@ function render() {
       <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at ${c.collective ? `your Connect Collective rate of ${money(c.price)} per visit` : "the standard per-visit rate"}. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
-    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length}">${incl.map(x => `<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
+    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length === 4 ? 2 : incl.length}">${incl.map(x => `<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}${x.tag ? ` <span class="pill bonus">${x.tag}</span>` : ""}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
     ${onePage ? `<p class="terms-note">The terms and policies of your Connect care agreement continue to apply. Ask us anytime for a copy.</p>
     <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>`
     : `<div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>`}

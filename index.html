@@ -265,6 +265,10 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .tiers.four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .tiers.grouped { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
 .tiers.grouped.one { grid-template-columns: minmax(0, 340px); }
+/* line Option 1's price up with Option 2's: same top spacing, no reserved label height */
+.tiers.grouped .tier .t { min-height: 0; }
+.tiers.grouped .tgroup { padding-top: 24px; }
+body.pv .tiers.grouped .tgroup { padding-top: 18px; }
 .tgroup { border: 1px solid var(--rule); border-radius: 10px; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 6px; }
 .tgroup .t { font: 600 11.5px var(--body); color: var(--soft); }
 .tgroup .amt { font: 800 30px/1 var(--display); letter-spacing: -.022em; color: var(--ink); }

@@ -700,7 +700,7 @@ function autoBonus() { $(AUTO_BONUS.id).checked = S.phase === AUTO_BONUS.phase &
 function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
     it => { S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
-  chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
+  chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
       const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.cur = -1; S.pick = -1;
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
       else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
@@ -757,27 +757,38 @@ S.breaks = [{ d: `${new Date().getFullYear()}-12-21`, w: 2 }];
 // Office closures are the same for every patient, so the last ones used are remembered on this computer.
 // Closures that have already ended are dropped.
 const CLOSURE_KEY = "connect-careplans-closures";
+// Closures matter most on Reconnect and Rebuild. On Optimize / Maintenance they start switched off, and
+// switching there doesn't change what's remembered for the next Reconnect or Rebuild plan.
+const closureDefault = () => !COMPARE[S.phase];
+let closuresOn = false;   // remembered on/off for Reconnect and Rebuild
 function saveClosures() {
-  try { localStorage.setItem(CLOSURE_KEY, JSON.stringify({ on: $("brk").checked, list: S.breaks })); } catch {}
+  if (closureDefault()) closuresOn = $("brk").checked;
+  try { localStorage.setItem(CLOSURE_KEY, JSON.stringify({ on: closuresOn, list: S.breaks })); } catch {}
 }
+function applyClosureDefault() { $("brk").checked = closureDefault() ? closuresOn && S.breaks.length > 0 : false; drawBreaks(); }
 try {
   const saved = JSON.parse(localStorage.getItem(CLOSURE_KEY) || "null");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const live = (saved?.list || []).filter(b => { const d = parse(b.d); return d && addDays(d, b.w * 7 - 1) >= today; });
-  if (live.length) { S.breaks = live; $("brk").checked = !!saved.on; }
+  if (live.length) { S.breaks = live; closuresOn = !!saved.on; $("brk").checked = closuresOn; }
 } catch {}
 function drawBreaks() {
   $("brkFields").hidden = !$("brk").checked;
   $("brkRows").innerHTML = S.breaks.map((b, i) => `<div class="brkrow">
       <label>Closed from<input type="date" id="bd${i}" data-bi="${i}" data-bk="d" value="${b.d}"></label>
       <label>For<select id="bw2${i}" data-bi="${i}" data-bk="w">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n === b.w ? "selected" : ""}>${n} week${n > 1 ? "s" : ""}</option>`).join("")}</select></label>
-      <button type="button" class="x" data-brm="${i}" aria-label="Remove closure ${i + 1}" ${S.breaks.length < 2 ? "disabled" : ""}>×</button></div>`).join("");
+      <button type="button" class="x" data-brm="${i}" aria-label="Remove closure ${i + 1}">×</button></div>`).join("");
 }
-$("brk").addEventListener("change", () => { drawBreaks(); saveClosures(); });
+$("brk").addEventListener("change", () => {
+  if ($("brk").checked && !S.breaks.length) S.breaks = [{ d: `${new Date().getFullYear()}-12-21`, w: 2 }];
+  drawBreaks(); saveClosures(); render(); });
 $("brkRows").addEventListener("input", e => { const i = e.target.dataset.bi; if (i === undefined) return;
   S.breaks[+i][e.target.dataset.bk] = e.target.dataset.bk === "w" ? +e.target.value : e.target.value; saveClosures(); render(); });
-$("brkRows").addEventListener("click", e => { const i = e.target.dataset.brm; if (i === undefined) return; S.breaks.splice(+i, 1); saveClosures(); drawBreaks(); render(); });
-$("addBrk").onclick = () => { const last = S.breaks[S.breaks.length - 1]; const d = parse(last.d) || new Date();
+$("brkRows").addEventListener("click", e => { const i = e.target.dataset.brm; if (i === undefined) return;
+  S.breaks.splice(+i, 1);
+  if (!S.breaks.length) $("brk").checked = false;   // removing the last closure turns closures off
+  saveClosures(); drawBreaks(); render(); });
+$("addBrk").onclick = () => { const last = S.breaks[S.breaks.length - 1]; const d = (last && parse(last.d)) || new Date();
   S.breaks.push({ d: iso(addDays(d, 28)), w: 1 }); saveClosures(); drawBreaks(); render(); };
 drawBreaks();
 // "Add an extra progress examination" simply switches between 1 and 2 progress exams.

@@ -774,6 +774,19 @@ $("f").addEventListener("submit", e => e.preventDefault());
 // A shrunk page is laid out wider first, so after shrinking it still spans the full 7.6in.
 const MARGIN_X = 0.7, MARGIN_Y = 0.4;           // inches; matches @page above
 const PAGE_W_IN = 8.5 - 2 * MARGIN_X, PAGE_H = (11 - 2 * MARGIN_Y) * 96 - 6;
+// A page shorter than the sheet is spread out: the gaps between sections grow (capped so it never looks
+// sparse) and the signature lines and footer settle at the bottom of the sheet.
+const BASE_GAP = 12, MAX_EXTRA_GAP = 18;
+function spreadPage(p) {
+  const free = PAGE_H - p.scrollHeight;
+  if (free <= 4) return;
+  const gaps = Math.max(1, p.children.length - 1);
+  p.style.gap = `${BASE_GAP + Math.min(MAX_EXTRA_GAP, free / gaps)}px`;
+  const bottom = p.querySelector(":scope > .init");
+  const left = PAGE_H - p.scrollHeight;
+  if (bottom && left > 0) bottom.style.marginTop = `${left}px`;
+}
+function unspreadPage(p) { p.style.gap = ""; const b = p.querySelector(":scope > .init"); if (b) b.style.marginTop = ""; }
 function fitPages() {
   document.body.classList.add("pv");
   document.querySelectorAll(".paper:not([hidden])").forEach(p => {
@@ -786,11 +799,13 @@ function fitPages() {
       p.style.width = `${(PAGE_W_IN / z).toFixed(3)}in`;
       p.style.zoom = z.toFixed(3);
     }
+    unspreadPage(p);
+    if (z === 1) spreadPage(p);
   });
 }
 function unfitPages() {
   document.body.classList.remove("pv");
-  document.querySelectorAll(".paper").forEach(p => { p.style.zoom = ""; p.style.width = ""; });
+  document.querySelectorAll(".paper").forEach(p => { p.style.zoom = ""; p.style.width = ""; unspreadPage(p); });
 }
 window.addEventListener("beforeprint", fitPages);
 window.addEventListener("afterprint", unfitPages);
@@ -851,6 +866,8 @@ async function buildPdf() {
         z = z * PAGE_H / h;
         p.style.width = `${(PAGE_W_IN / z).toFixed(3)}in`;
       }
+      unspreadPage(p);
+      if (z === 1) spreadPage(p);
       const canvas = await html2canvas(p, { scale: 3, backgroundColor: "#ffffff", logging: false });
       const hIn = Math.min(canvas.height / canvas.width * PAGE_W_IN, 11 - 2 * MARGIN_Y);
       if (i) pdf.addPage();

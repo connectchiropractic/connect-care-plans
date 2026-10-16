@@ -266,7 +266,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmpbox { display: grid; gap: 6px; }
 .progbox { display: grid; gap: 8px; padding-top: 4px; border-top: 1px solid var(--rule); }
 .progrow { display: grid; grid-template-columns: minmax(0, 1fr) 90px; align-items: center; gap: 10px; }
-.progrow[hidden], #extraWrap[hidden] { display: none; }
+.progrow[hidden], #extraWrap[hidden], #nProgRow[hidden] { display: none; }
 .paper[hidden] { display: none !important; }
 .cmp th small { display: block; font-weight: 500; font-size: 10.5px; color: var(--faint); }
 .cmp .ppvc { color: var(--soft); }
@@ -556,7 +556,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <div class="btot"><span>Total</span><b class="num" id="btot"></b></div>
       <div id="cmpBox" class="cmpbox"></div>
       <div class="progbox">
-      <div class="two">
+      <div class="two" id="nProgRow">
         <label>Progress examinations<select id="nProg"><option value="0">None</option><option value="1" selected>1</option><option value="2">2</option></select></label>
       </div>
       <label class="progrow" id="pa0row">Progress examination at visit<input id="pa0" type="number" min="1" step="1"></label>
@@ -988,6 +988,9 @@ function compute() {
   const yearly = weeks >= YEARLY_WEEKS;
   $("nProg").querySelector('option[value="0"]').disabled = yearly;
   if (yearly && $("nProg").value === "0") $("nProg").value = "1";
+  // Optimize / Maintenance: no progress exam on 6-month plans; exactly one, halfway, on 1-year plans.
+  const fixedProg = !!COMPARE[S.phase];
+  if (fixedProg) $("nProg").value = yearly ? "1" : "0";
   const nProg = parseInt($("nProg").value) || 0;
   // Suggested progress exam visit(s), from Dr. Steve's rules of thumb. The CA can type over them;
   // a change to the bands or the number of exams brings the suggestion back.
@@ -999,7 +1002,8 @@ function compute() {
   if (!S.progManual) suggested.forEach((v, i) => $("pa" + i).value = v);
   $("pa0row").hidden = nProg < 1;
   $("pa1row").hidden = nProg < 2;
-  $("extraWrap").hidden = nProg < 1;
+  $("extraWrap").hidden = nProg < 1 || fixedProg;
+  $("nProgRow").hidden = fixedProg;
   $("extraProg").checked = nProg >= 2;
   const progAt = Array.from({ length: nProg }, (_, i) => Math.min(visits, Math.max(1, parseInt($("pa" + i).value) || suggested[i])));
   const visitFee = r2(visits * price), progFee = r2(nProg * price), reFee = price;   // every plan ends with a re-examination

@@ -254,6 +254,9 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmpbox { display: grid; gap: 6px; }
 #note { font: 500 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink); background: var(--field); border: 1px solid var(--rule); border-radius: 7px; padding: 10px; width: 100%; resize: vertical; white-space: pre; overflow-x: auto; }
 #copyNote { justify-self: start; }
+.reopen { margin-top: -10px; }
+.reopen > div { padding-top: 4px; }
+#loadCode { justify-self: start; }
 #bands[hidden], #addBand[hidden] { display: none; }
 .coll-note { margin: 6px 0 0; font-size: 12px; color: var(--soft); }
 .ppv { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: baseline; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; font-size: 12.5px; color: var(--soft); }
@@ -403,6 +406,11 @@ body.pv .pol li { margin-bottom: 5px; }
 <div class="app">
   <form class="rail" id="f" autocomplete="off">
     <div><h1>Care Plan Maker</h1><p>Fill in the steps. The plan on the right updates as you go.</p></div>
+    <details class="reopen"><summary>Reopen a saved plan</summary><div>
+      <label>Plan code from the patient's file note<input id="planCode" placeholder="CP1-…" autocomplete="off" spellcheck="false"></label>
+      <button type="button" class="btn go" id="loadCode">Reopen</button>
+      <p class="hint" id="codeMsg">Everything comes back except the name. Type the patient's name again.</p>
+    </div></details>
 
     <section class="step"><h2><b>1</b>Plan type</h2>
       <div class="chips" id="audience"></div>
@@ -604,6 +612,32 @@ function unfitPages() {
 }
 window.addEventListener("beforeprint", fitPages);
 window.addEventListener("afterprint", unfitPages);
+// Plan code: every setting except the patient's name, so a plan can be reopened later from the file note.
+const b64u = t => btoa(unescape(encodeURIComponent(t))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = t => decodeURIComponent(escape(atob(t.replace(/-/g, "+").replace(/_/g, "/"))));
+function planCode() {
+  return "CP1-" + b64u(JSON.stringify({
+    a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
+    np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
+    bk: [+$("brk").checked, $("brkDate").value, +$("brkW").value],
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice
+  }));
+}
+function loadPlanCode(code) {
+  const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
+  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full" });
+  $("start").value = d.s; $("cc").checked = !!d.cc; $("nProg").value = String(d.np);
+  $("brk").checked = !!d.bk[0]; $("brkDate").value = d.bk[1]; $("brkW").value = String(d.bk[2]); $("brkFields").hidden = !d.bk[0];
+  INCLUDED.forEach((x, i) => $(x.id).checked = !!d.in[i]);
+  if (d.pa) { $("pa0").value = d.pa[0]; $("pa1").value = d.pa[1]; S.progManual = true; } else S.progManual = null;
+  S.progSig = JSON.stringify([S.bands, d.np]);
+  $("last").value = ""; $("first").value = "";
+  drawForm(); render();
+}
+$("loadCode").onclick = () => {
+  try { loadPlanCode($("planCode").value); $("codeMsg").textContent = "Plan reopened. Type the patient's name."; $("last").focus(); }
+  catch { $("codeMsg").textContent = "That code didn't work. Copy the whole line starting with CP1- from the file note."; }
+};
 $("choice").addEventListener("click", e => { const b = e.target.closest("[data-ch]"); if (b) { S.choice = b.dataset.ch; render(); } });
 $("copyNote").onclick = async () => {
   const b = $("copyNote");
@@ -828,7 +862,7 @@ function render() {
   const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));
   if (!offer.some(([v]) => v === S.choice)) S.choice = "full";
   $("choice").innerHTML = offer.map(([v, t]) => `<button type="button" class="chip" data-ch="${v}" aria-pressed="${v === S.choice}">${t}</button>`).join("");
-  $("note").value = fileNote(c, full, S.audience === "Kids");
+  $("note").value = fileNote(c, full, S.audience === "Kids") + `\n\nPlan code (paste into the Care Plan Maker to reopen this plan):\n${planCode()}`;
   $("pays").innerHTML = `<div class="ph2"><b></b><span></span><span>Charge</span></div>` +
     c.pays.map((p, i) => `<div><b>${i + 1}</b><span>${i === 0 ? "In office" : long(p.date)}</span><span class="num">${money(p.amt)}</span></div>`).join("") + `<p class="paynote">Card payments: charge these amounts. The card machine adds the ${CARD_FEE}% fee itself, so never add it by hand.</p>`;
 

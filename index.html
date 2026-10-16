@@ -132,6 +132,9 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .stop.done { color: var(--soft); }
 .stop.done i { background: var(--green); border-color: var(--green); }
 .stop.now { color: var(--ink); }
+.stop.skip { color: var(--faint); font-weight: 600; }
+.stop.skip i { border-style: dashed; }
+.stop .notsel { font: 600 10px var(--body); color: var(--faint); box-shadow: inset 0 0 0 1px var(--rule); border-radius: 999px; padding: 2px 7px; }
 .stop.now i { width: 18px; height: 18px; border: 2px solid var(--green); box-shadow: inset 0 0 0 3px var(--paper); background: var(--green); }
 .stop .here { font: 700 9px var(--body); letter-spacing: .14em; text-transform: uppercase; background: var(--green); color: #fff; padding: 3px 8px; border-radius: 999px; }
 .link { flex: 1; min-width: 14px; height: 2px; background: repeating-linear-gradient(90deg, var(--rule) 0 5px, transparent 5px 9px); }
@@ -534,7 +537,13 @@ const COMPARE = { Optimize: { on: [4, 5] }, Maintain: { on: [6, 7] } };
 const PROMISE_PHASE = "Reconnect";   // the Connect Care Promise is only offered on Reconnect plans
 const PROGRESS_EXAM_PHASES = ["Reconnect"];   // progress exams are on by default here; later phases start at None
 const VISIT_CHART_PHASE = "Reconnect";   // the week-by-week visit chart only shows on the first plan
-const JOURNEY = [{ name: "Reconnect", phases: ["Reconnect"] }, { name: "Rebuild", phases: ["Rebuild"] }, { name: "Optimize", phases: ["Optimize", "Maintain"] }];
+// The journey line on the plan. Optimize plans end at Optimize; Maintain plans add Maintain and show
+// Optimize as a stage they did not choose.
+function journeyStops(phase) {
+  const base = ["Reconnect", "Rebuild", "Optimize"];
+  if (phase !== "Maintain") return base.map(n => ({ name: n }));
+  return [...base.map(n => ({ name: n, skip: n === "Optimize" })), { name: "Maintain" }];
+}
 const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the file name
 // GoCardless logo: drop the official logo into this folder as gocardless-logo.png and it is used automatically.
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
@@ -577,7 +586,7 @@ function drawCompare() {
   const b = S.bands[0], all = FREQS.map((f, q) => q).filter(q => FREQS[q][1].startsWith("Every "));
   $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips">${TIMEFRAMES.map(t =>
       `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
-    <div class="lbl">Plan on page 2</div><div class="chips">${all.map(q =>
+    <div class="lbl">Plan frequency</div><div class="chips">${all.map(q =>
       `<button type="button" class="chip" data-pq="${q}" aria-pressed="${b.q === q}">${FREQS[q][1].replace(/ \(.*\)/, "")}</button>`).join("")}</div>
     <div class="lbl">Also compare on page 1</div>${all.filter(q => q !== b.q).map(q =>
       `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}`;
@@ -930,10 +939,10 @@ function render() {
     ...Array.from({ length: b.w }, () => `<div class="wk off" title="Office closed"><span class="d"></span><span class="n">—</span></div>`)));
   const weeksHtml = weekCells.join("");
   const brkNote = c.brkW ? `<p class="brk-note"><i></i>Office closed ${c.breaks.map(b => `${shortDate(b.date)} – ${shortDate(addDays(b.date, b.w * 7 - 1))}`).join(" and ")}. Your time frame includes ${c.breaks.length > 1 ? "these breaks" : "this break"}.</p>` : "";
-  const jIdx = JOURNEY.findIndex(j => j.phases.includes(S.phase));
+  const stops = journeyStops(S.phase), jIdx = stops.findIndex(j => j.name === S.phase);
   const incl = INCLUDED.filter(x => $(x.id).checked);
   const journey = `<section class="journey" aria-label="Your care journey"><div class="jhead"><span>${Whose} journey · The Connect Care Process™</span></div>
-    <div class="path">${JOURNEY.map((j, i) => `${i ? `<span class="link ${i <= jIdx ? "done" : ""}"></span>` : ""}<span class="stop ${i < jIdx ? "done" : i === jIdx ? "now" : "next"}"><i>${i < jIdx ? "✓" : ""}</i>${j.name}${i === jIdx ? `<span class="here">You are here</span>` : ""}</span>`).join("")}</div></section>`;
+    <div class="path">${stops.map((j, i) => `${i ? `<span class="link ${i <= jIdx ? "done" : ""}"></span>` : ""}<span class="stop ${j.skip ? "skip" : i < jIdx ? "done" : i === jIdx ? "now" : "next"}"><i>${i < jIdx && !j.skip ? "✓" : ""}</i>${j.name}${i === jIdx ? `<span class="here">You are here</span>` : ""}${j.skip ? `<span class="notsel">Not selected</span>` : ""}</span>`).join("")}</div></section>`;
   const freqRows = c.rows.filter(r => r.w).map(r => `<tr><td>${r.t}</td><td class="num">${r.w} weeks</td><td class="num">${r.v} visits</td></tr>`).join("");
 
   // Optimize and Maintain: one page. Frequency options, how they'd like to pay, and a signature.

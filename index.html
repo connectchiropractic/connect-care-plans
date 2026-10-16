@@ -111,11 +111,11 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cside b { font: 600 13px var(--body); color: var(--faint); }
 .cside .big { font: 800 22px/1.1 var(--display); letter-spacing: -.022em; }
 .cside s { text-decoration-thickness: 2px; text-decoration-color: var(--move); }
-.cside.you { background: var(--mint2); border-left: 1px solid var(--rule); }
+.cside.you { border-left: 1px solid var(--rule); }
 .cside.you span { color: var(--green); }
 .cside.you b { color: var(--ink); }
-.csave { background: var(--green); color: #fff; padding: 12px 20px; display: grid; align-content: center; justify-items: center; text-align: center; }
-.csave span { font: 700 9.5px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--mint); }
+.csave { border-left: 2px solid var(--green); color: var(--green); padding: 12px 22px; display: grid; align-content: center; justify-items: center; text-align: center; }
+.csave span { font: 700 9.5px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--green); }
 .csave b { font: 800 26px/1.1 var(--display); letter-spacing: -.022em; }
 .plan td s { color: var(--faint); margin-right: 2px; }
 .who .tf small.csm { color: var(--green); font-weight: 700; }
@@ -145,7 +145,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .sec { display: grid; gap: 14px; }
 
 .weeks { display: flex; gap: 3px; flex-wrap: wrap; }
-.wk { flex: 1 0 22px; max-width: 34px; display: grid; justify-items: center; gap: 4px; padding: 6px 0 5px; border-radius: 4px; background: var(--mint2); }
+.wk { flex: 1 0 22px; max-width: 34px; display: grid; justify-items: center; gap: 4px; padding: 6px 0 5px; border-radius: 4px; border: 1px solid var(--rule); }
 .wk .d { display: flex; flex-direction: column-reverse; gap: 3px; height: 39px; }
 .wk .d i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 .wk .n { font: 600 9px var(--ui); color: var(--faint); }
@@ -157,11 +157,11 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .plan .mute td { color: var(--faint); }
 .plan tfoot td { border-bottom: 0; border-top: 1.5px solid var(--ink); font-weight: 900; padding-top: 9px; }
 
-.fee { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--deep); color: #fff; border-radius: 8px; padding: 16px 22px; }
-.fee span { font: 700 11px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--mint); }
-.fee b { font: 800 32px/1 var(--display); letter-spacing: -.022em; }
+.fee { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); padding: 12px 2px; }
+.fee span { font: 700 11px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--green); }
+.fee b { font: 800 32px/1 var(--display); letter-spacing: -.022em; color: var(--ink); }
 
-.promise { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; background: var(--mint2); border-radius: 10px; padding: 18px 20px; color: var(--green); }
+.promise { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; border: 1.5px solid var(--green); border-radius: 10px; padding: 18px 20px; color: var(--green); }
 .promise h3 { margin: 0 0 4px; font: 700 19px var(--display); letter-spacing: -.022em; color: var(--ink); }
 .promise p, .promise ul { margin: 0 0 6px; font-size: 13.5px; color: var(--ink); }
 .promise ul { padding-left: 18px; }
@@ -217,7 +217,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 
 .commit { font: italic 400 16px/1.5 var(--accent); font-variation-settings: "SOFT" 40, "WONK" 1; color: var(--soft); margin: 0; border-left: 3px solid var(--mint); padding-left: 14px; }
 .pol { margin: 0; padding-left: 20px; display: grid; gap: 9px; font-size: 12.5px; color: var(--soft); }
-.ex { margin-top: 6px; font-size: 12px; display: grid; grid-template-columns: auto auto 1fr; gap: 2px 14px; background: var(--mint2); border-radius: 6px; padding: 10px 12px; }
+.ex { margin-top: 6px; font-size: 12px; display: grid; grid-template-columns: auto auto 1fr; gap: 2px 14px; border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; }
 .ex b { text-align: right; color: var(--ink); }
 .foot { display: flex; justify-content: space-between; font: 700 9.5px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--faint); border-top: 1px solid var(--rule); padding-top: 10px; }
 
@@ -237,7 +237,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
 .tiers.one { grid-template-columns: minmax(0, 340px); }
 .tier { position: relative; border: 1px solid var(--rule); border-radius: 10px; padding: 22px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
-.tier.best { border: 2px solid var(--green); padding: 21px 15px 15px; background: var(--mint2); }
+.tier.best { border: 2px solid var(--green); padding: 21px 15px 15px; }
 .tier .flag { position: absolute; top: -10px; left: 14px; background: var(--green); color: #fff; font: 700 9.5px var(--body); letter-spacing: .16em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
 .tier .t { font: 700 10px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--soft); min-height: 38px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
 .tier.best .t { color: var(--green); }
@@ -246,7 +246,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .tier .was { font: 600 12px var(--body); color: var(--soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 22px; }
 .tier .was s { color: var(--faint); }
 .pill { font: 700 11px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 2px 8px; }
-.pill.quiet { background: var(--mint); color: var(--deep); }
+.pill.quiet { background: none; color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
 .tier ul { margin: 4px 0 0; padding: 10px 0 0; border-top: 1px solid var(--rule); list-style: none; display: grid; gap: 6px; font-size: 12.5px; color: var(--soft); flex: 1; align-content: start; }
 .tier li { padding-left: 14px; position: relative; }
 .tier li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
@@ -318,7 +318,8 @@ body.pv .pol li { margin-bottom: 5px; }
 
 @page { size: letter; margin: 0.45in; }
 @media print {
-  body { background: #fff; }
+  html, body, .app, .desk { background: #fff !important; }
+  .paper { background: #fff; }
   .rail, .bar { display: none !important; }
   .app { display: block; }
   .desk { padding: 0; display: block; }
@@ -454,18 +455,25 @@ $("f").addEventListener("input", e => { if (/^pa\d$/.test(e.target.id)) S.progMa
 $("f").addEventListener("submit", e => e.preventDefault());
 // Before printing: switch to the print layout and shrink any page that would not fit on one
 // letter sheet (10.1in of height inside the margins), so a plan is always exactly two pages.
-const PAGE_H = 10.1 * 96 - 6;
+// A shrunk page is laid out wider first, so after shrinking it still spans the full 7.6in.
+const PAGE_W_IN = 7.6, PAGE_H = 10.1 * 96 - 6;
 function fitPages() {
   document.body.classList.add("pv");
   document.querySelectorAll(".paper").forEach(p => {
-    p.style.zoom = "";
-    const h = p.scrollHeight;
-    if (h > PAGE_H) p.style.zoom = (PAGE_H / h).toFixed(3);
+    p.style.zoom = ""; p.style.width = "";
+    let z = 1;
+    for (let i = 0; i < 3; i++) {   // widening rewraps text, so settle in a few passes
+      const h = p.scrollHeight * z;
+      if (h <= PAGE_H) break;
+      z = z * PAGE_H / h;
+      p.style.width = `${(PAGE_W_IN / z).toFixed(3)}in`;
+      p.style.zoom = z.toFixed(3);
+    }
   });
 }
 function unfitPages() {
   document.body.classList.remove("pv");
-  document.querySelectorAll(".paper").forEach(p => p.style.zoom = "");
+  document.querySelectorAll(".paper").forEach(p => { p.style.zoom = ""; p.style.width = ""; });
 }
 window.addEventListener("beforeprint", fitPages);
 window.addEventListener("afterprint", unfitPages);

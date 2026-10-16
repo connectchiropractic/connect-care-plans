@@ -297,6 +297,13 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .plan tbody tr:first-child td { padding-top: 0; }
 .wk { border: 0; padding: 2px 0; }
 .weeks { padding-top: 16px; row-gap: 20px; }
+.incl { display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.incl h4 { margin: 0; font: 700 15px var(--display); letter-spacing: -.015em; color: var(--ink); }
+.incl-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 28px; }
+.incl-row div { display: grid; gap: 1px; font-size: 12.5px; color: var(--soft); }
+.incl-row b { font: 700 13.5px var(--body); color: var(--ink); }
+.lbl { font: 600 12px var(--ui); color: var(--soft); margin-top: 4px; }
+@media (max-width: 600px) { .incl-row { grid-template-columns: minmax(0, 1fr); } }
 .mk:last-child span { left: auto; right: 0; transform: none; }
 .mk { flex: 0 0 1.5px; align-self: stretch; background: var(--ink); position: relative; margin: 0 2px; }
 .mk span { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 3px; font: 600 9.5px var(--body); color: var(--ink); white-space: nowrap; }
@@ -406,6 +413,9 @@ body.pv .pol li { margin-bottom: 5px; }
       </div>
       <p class="hint" id="progHint"></p>
       <p class="hint">Every plan also includes a re-examination at the end.</p>
+      <div class="lbl">Included with their care</div>
+      <label class="cc"><input type="checkbox" id="inPH" checked> <span>PracticeHub app<small>Reminders, calendar sync, exercise library, mobility tests</small></span></label>
+      <label class="cc"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
     </section>
 
     <section class="step"><h2><b>5</b>Payments</h2>
@@ -446,6 +456,11 @@ const CARD_FEE = 2.4;              // percent, on instalments paid by credit car
 const WEEKS_PER_PAYMENT = 4;          // one payment for every 4 weeks of the plan
 const MIN_DAYS_TO_FIRST_DRAW = 15;    // first GoCardless withdrawal is at least this many days after payment 1
 // The journey printed on the plan. Maintain sits at the top alongside Optimize.
+// Included with every plan (the CA can untick one). Only list what really exists for patients today.
+const INCLUDED = [
+  { id: "inPH", name: "PracticeHub app", desc: "Appointment reminders and calendar sync, plus the corrective exercise library and mobility tests." },
+  { id: "inMP", name: "Connect Meal Plan", desc: "Custom healthy meals built around your local grocery store and what's on sale. mealplan.connectchiropractic.com" }
+];
 const PROMISE_PHASE = "Reconnect";   // the Connect Care Promise is only offered on Reconnect plans
 const PROGRESS_EXAM_PHASES = ["Reconnect"];   // progress exams are on by default here; later phases start at None
 const VISIT_CHART_PHASE = "Reconnect";   // the week-by-week visit chart only shows on the first plan
@@ -645,6 +660,7 @@ function render() {
   const weeksHtml = weekCells.join("");
   const brkNote = c.brkW ? `<p class="brk-note"><i></i>Office closed ${shortDate(c.brkDate)} – ${shortDate(addDays(c.brkDate, c.brkW * 7 - 1))} (${c.brkW} week${c.brkW > 1 ? "s" : ""}). Your time frame includes this break.</p>` : "";
   const jIdx = JOURNEY.findIndex(j => j.phases.includes(S.phase));
+  const incl = INCLUDED.filter(x => $(x.id).checked);
   const journey = `<section class="journey" aria-label="Your care journey"><div class="jhead"><span>Your journey · The Connect Care Process™</span></div>
     <div class="path">${JOURNEY.map((j, i) => `${i ? `<span class="link ${i <= jIdx ? "done" : ""}"></span>` : ""}<span class="stop ${i < jIdx ? "done" : i === jIdx ? "now" : "next"}"><i>${i < jIdx ? "✓" : ""}</i>${j.name}${i === jIdx ? `<span class="here">You are here</span>` : ""}</span>`).join("")}</div></section>`;
   const freqRows = c.rows.filter(r => r.w).map(r => `<tr><td>${r.t}</td><td class="num">${r.w} weeks</td><td class="num">${r.v} visits</td></tr>`).join("");
@@ -689,6 +705,7 @@ function render() {
       <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at the standard per-visit rate. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
+    ${incl.length ? `<section class="incl"><h4>Included with your care</h4><div class="incl-row">${incl.map(x => `<div><b>${x.name}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
     <div class="init"><div><span>Client initials</span></div><div><span>Doctor initials</span></div></div>
     <div class="foot"><span>Page 1 of 2 · Care plan</span><span>${esc(full)}</span></div>`;
 

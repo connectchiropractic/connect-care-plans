@@ -243,6 +243,12 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 
 /* investment options: three choices, best value first */
 .who .tf small { display: block; font: 600 12px var(--body); color: var(--faint); margin-top: 2px; }
+.coll-note { margin: 6px 0 0; font-size: 12px; color: var(--soft); }
+.ppv { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: baseline; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; font-size: 12.5px; color: var(--soft); }
+.ppv b { font: 700 15px var(--display); color: var(--ink); }
+.ppv .more { color: var(--ink); font-weight: 700; }
+.ppv .tick { margin: 0; padding: 0; }
+@media (max-width: 700px) { .ppv { grid-template-columns: minmax(0, 1fr); } }
 .tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
 .tiers.one { grid-template-columns: minmax(0, 340px); }
 .tier { position: relative; border: 1px solid var(--rule); border-radius: 10px; padding: 22px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
@@ -652,6 +658,8 @@ function compute() {
   const total = r2(visitFee + progFee + reFee);
   // What the same plan costs at the standard price, so Collective members see their saving.
   const stdTotal = r2((visits + nProg + 1) * PRICE_FULL), collSave = collective ? r2(stdTotal - total) : 0;
+  // Rebuild and later: the Collective price is for patients on a care plan; pay-per-visit stays at full price.
+  const planOnly = !fullPricePhase && collSave > 0;
   // The 5% is for standard-price Reconnect plans only; Connect Collective pricing never stacks with it.
   const disc = REDUCTION_PHASES.includes(S.phase) && !collective ? PAY_IN_FULL_REDUCTION : 0;
   const saving = r2(total * disc / 100), full = r2(total - saving);
@@ -678,7 +686,7 @@ function compute() {
   const exVisits = schedule.slice(0, exWeeks).reduce((a, b) => a + b, 0);
   const exCut = addDays(start, exWeeks * 7);
   const exPaid = pays.filter(p => p.date < exCut);
-  return { stdTotal, collSave, brkW, brkAt, brkDate, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
+  return { planOnly, stdTotal, collSave, brkW, brkAt, brkDate, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
 }
 
 /* ---------- pages ---------- */
@@ -748,7 +756,7 @@ function render() {
       ${c.collSave ? `<div class="coll">
         <div class="cside"><span>Standard price</span><b class="num"><s>${money(PRICE_FULL)}</s> per visit</b><b class="num big"><s>${money(c.stdTotal)}</s></b></div>
         <div class="cside you"><span>Your Connect Collective price</span><b class="num">${money(c.price)} per visit</b><b class="num big">${money(c.total)}</b></div>
-        <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>` : ""}
+        <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>${c.planOnly ? `<p class="coll-note">Connect Collective pricing applies when you choose one of the care plan options on page 2. Paying visit by visit is ${money(PRICE_FULL)} per visit.</p>` : ""}` : ""}
       <div class="fee"><span>${Whose} program fee${c.collective ? " · Connect Collective pricing" : ""}</span><b class="num">${money(c.total)}</b></div>
     </section>
 
@@ -767,7 +775,7 @@ function render() {
     </section>` : ""}
 
     ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length}">${incl.map(x => `<div><b>${x.name}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
-    <div class="init"><div><span>Client initials</span></div><div><span>Doctor initials</span></div></div>
+    <div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>
     <div class="foot"><span>Page 1 of 2 · Care plan</span><span>${esc(full)}</span></div>`;
 
   const inst = c.n > 1;
@@ -816,6 +824,7 @@ function render() {
         <div class="tick"><i></i>I choose this</div>
       </div>` : ""}
     </div>
+    ${c.planOnly ? `<div class="ppv"><span class="t">Without a care plan</span><b>Pay per visit</b><span class="num">${money(PRICE_FULL)} per visit · ${money(c.stdTotal)} for the same visits and exams</span><span class="num more">${money(c.collSave)} more than the plan options above</span><span class="tick"><i></i>I choose this</span></div>` : ""}
 
     ${inst ? `<section class="sec">
       <div class="h3"><h3>Instalment schedule</h3><span>Payment 1 is at your first visit</span></div>
@@ -850,7 +859,7 @@ function render() {
       </ol>
       <p class="commit" style="font-size:14px">We aim to be fair and transparent. If you ever have questions about your care or your account, ask us. We'd rather clarify early than have you feel surprised later.</p></section>
 
-    <div class="init"><div><span>Client signature</span></div><div><span>Date</span></div></div>
+    <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>
     <div class="foot"><span>Page 2 of 2 · Investment options</span><span>${esc(full)}</span></div>`;
 }
 

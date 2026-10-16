@@ -356,6 +356,8 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .incl h4 { margin: 0; font: 700 15px var(--display); letter-spacing: -.015em; color: var(--ink); }
 .incl-row { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 6px 28px; }
 .incl-row div { display: grid; gap: 1px; font-size: 12.5px; color: var(--soft); }
+.incl-row .it { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; }
+.incl-row .ic { width: 24px; height: 24px; fill: none; stroke: var(--green); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
 .incl-row b { font: 700 13.5px var(--body); color: var(--ink); }
 .pill.bonus { font-size: 10px; padding: 1px 7px; white-space: nowrap; display: table; margin: 3px 0 1px; }
 .incl-row div { overflow-wrap: anywhere; }
@@ -542,6 +544,15 @@ const MIN_WEEKS_FOR_INSTALMENTS = 7;  // 7+ week plans always get at least 2 pay
 const PAID_OFF_DAYS_BEFORE_END = 14;   // every payment is in at least 2 weeks before the plan ends
 const MIN_DAYS_TO_FIRST_DRAW = 15;    // first GoCardless withdrawal is at least this many days after payment 1
 // The journey printed on the plan. Maintenance sits at the top alongside Optimize.
+// Small outline icons for the "Included with your care" items (24×24, drawn in the line colour).
+const ICONS = {
+  inPH: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/>',
+  inMP: '<path d="M7 3v7a2 2 0 0 0 2 2v9M11 3v7a2 2 0 0 1-2 2M7 3v5M9 3v5"/><path d="M17 21V3c-2 1.5-3 4-3 7 0 2 1 3 3 3"/>',
+  inKG: '<path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/>',
+  inNM: '<circle cx="13" cy="4.5" r="2"/><path d="M8.5 9.5 12 8l3 2.5 3.5.5M12 8l-1 5 3.5 3-1 4.5M11 13l-3 2.5-3-.5"/>',
+  inFP: '<circle cx="8.5" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M3 19.5c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5M14 14.3c.8-.5 1.6-.8 2.5-.8 2.5 0 4.5 2 4.5 5"/>'
+};
+const icon = id => ICONS[id] ? `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[id]}</svg>` : "";
 // Included with every plan (the CA can untick one). Only list what really exists for patients today.
 const INCLUDED = [
   { id: "inPH", name: "PracticeHub app", desc: "Appointment reminders and calendar sync, plus the corrective exercise library and mobility tests." },
@@ -1044,7 +1055,7 @@ function render() {
       <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at ${c.collective ? `your Connect Collective rate of ${money(c.price)} per visit` : "the standard per-visit rate"}. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
-    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length === 4 ? 2 : incl.length}">${incl.map(x => `<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}${x.tag ? ` <span class="pill bonus">${x.tag}</span>` : ""}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
+    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length === 4 ? 2 : incl.length}">${incl.map(x => `<div class="it">${icon(x.id)}<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}${x.tag ? ` <span class="pill bonus">${x.tag}</span>` : ""}</b><span>${x.desc}</span></div></div>`).join("")}</div></section>` : ""}
     ${onePage ? `<p class="terms-note">The terms and policies of your Connect care agreement continue to apply. Ask us anytime for a copy.</p>
     <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>`
     : `<div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>`}

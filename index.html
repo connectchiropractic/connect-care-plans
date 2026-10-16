@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Lato:wght@400;700;900&family=Fraunces:ital,opsz,wght,SOFT,WONK@1,9..144,400,40,1&display=swap">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 /* Layout: a short numbered form on the left for the CA, the two printed pages on the right. */
 :root {
@@ -428,7 +430,7 @@ body.pv .pol li { margin-bottom: 5px; }
   <main class="desk">
     <div class="bar">
       <div class="file">Save as <span id="fname"></span></div>
-      <div class="btns"><button type="button" class="btn" id="copy">Copy file name</button><button type="button" class="btn go" id="print">Print / Save PDF</button></div>
+      <div class="btns"><button type="button" class="btn" id="copy">Copy file name</button><button type="button" class="btn" id="print">Print</button><button type="button" class="btn go" id="savePdf">Save PDF</button></div>
     </div>
     <article class="paper" id="p1"></article>
     <article class="paper" id="p2"></article>
@@ -536,6 +538,48 @@ function unfitPages() {
 window.addEventListener("beforeprint", fitPages);
 window.addEventListener("afterprint", unfitPages);
 $("print").onclick = () => { fitPages(); window.print(); };
+// Save PDF: builds the two pages into a letter-size PDF in the browser and downloads it,
+// named like the old files, with no print window. Each page is laid out exactly as it prints.
+async function buildPdf() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "in", format: "letter" });
+  const M = 0.45;
+  document.body.classList.add("pv");
+  try {
+    const pages = [...document.querySelectorAll(".paper")];
+    for (const [i, p] of pages.entries()) {
+      p.style.zoom = ""; p.style.width = "";
+      let z = 1;
+      for (let k = 0; k < 3; k++) {   // same fit-to-page rule as printing, without CSS zoom
+        const h = p.scrollHeight * z;
+        if (h <= PAGE_H) break;
+        z = z * PAGE_H / h;
+        p.style.width = `${(PAGE_W_IN / z).toFixed(3)}in`;
+      }
+      const canvas = await html2canvas(p, { scale: 3, backgroundColor: "#ffffff", logging: false });
+      const hIn = Math.min(canvas.height / canvas.width * PAGE_W_IN, 10.1);
+      if (i) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", M, M, PAGE_W_IN, hIn);
+    }
+  } finally {
+    unfitPages();
+  }
+  return pdf;
+}
+$("savePdf").onclick = async () => {
+  const b = $("savePdf"), label = b.textContent;
+  if (!window.jspdf || !window.html2canvas) { b.textContent = "Needs internet to save"; setTimeout(() => b.textContent = label, 2500); return; }
+  b.disabled = true; b.textContent = "Saving…";
+  try {
+    await document.fonts.ready;
+    (await buildPdf()).save(`${$("fname").textContent.replace(/[\/\\:]/g, "-")}.pdf`);
+    b.textContent = "Saved to Downloads";
+  } catch (err) {
+    console.error(err);
+    b.textContent = "Couldn't save. Use Print instead";
+  }
+  setTimeout(() => { b.textContent = label; b.disabled = false; }, 2500);
+};
 $("copy").onclick = async () => {
   const t = $("fname").textContent;
   try { await navigator.clipboard.writeText(t); $("copy").textContent = "Copied"; }

@@ -260,6 +260,12 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .paper[hidden] { display: none !important; }
 .cmp th small { display: block; font-weight: 500; font-size: 10.5px; color: var(--faint); }
 .cmp .ppvc { color: var(--soft); }
+.tiers.four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tiers.four .tier .t { letter-spacing: 0; white-space: nowrap; }
+.tier .amt.sm { font-size: 24px; }
+.tier .amt.sm small { font-size: 12px; }
+body.pv .tier .amt.sm { font-size: 21px; }
+@media (max-width: 700px) { .tiers.four { grid-template-columns: minmax(0, 1fr); } }
 .paychoice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
 .paychoice > div { display: grid; align-content: start; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; font-size: 12.5px; color: var(--soft); }
 .paychoice .tick { grid-row: 1 / span 2; grid-column: 1; align-self: start; padding: 2px 0 0; }
@@ -961,13 +967,25 @@ function render() {
   const shortD = d => d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const payBlock = onePage ? `<section class="sec">
       <div class="h3"><h3>How would you like to pay?</h3><span>Payment 1 is at the first visit</span></div>
-      <div class="paychoice">
-        <div><span class="tick"><i></i></span><b>Option 1 · Pay in full</b><span>One payment at the first visit. No processing fee, even by credit card.</span></div>
-        ${c.n > 1 ? `<div><span class="tick"><i></i></span><b>Option 2A · Monthly by bank</b><span>Withdrawn through GoCardless on the ${drawDay1} of each month. No fee.</span></div>
-        <div><span class="tick"><i></i></span><b>Option 2B · Monthly by card</b><span>In office on the same dates. The card machine adds ${CARD_FEE}%; the card fee can't be claimed on insurance.</span></div>` : ""}
-        ${c.planOnly ? `<div><span class="tick"><i></i></span><b>Option 3 · Pay per visit</b><span>${money(PRICE_FULL)} per visit, without care plan pricing.</span></div>` : ""}
+      <div class="tiers ${c.planOnly && c.n > 1 ? "four" : ""}">
+        <div class="tier"><span class="t">Option 1 · Pay in full</span>
+          <div class="amt sm">1 payment</div><div class="was"><span class="pill quiet">No fee</span></div>
+          <ul><li>Paid at the first visit</li><li><b>No processing fee, even by credit card</b></li></ul>
+          <div class="tick"><i></i>I choose this</div></div>
+        ${c.n > 1 ? `<div class="tier"><span class="t">Option 2A · Monthly, bank</span>
+          <div class="amt sm">${c.n} payments</div><div class="was"><span class="pill quiet">No fee</span></div>
+          <ul><li>First payment at the first visit</li><li>Then withdrawn through GoCardless on the ${drawDay1} of each month</li></ul>
+          <div class="tick"><i></i>I choose this</div></div>
+        <div class="tier"><span class="t">Option 2B · Monthly, card</span>
+          <div class="amt sm">${c.n} payments</div><div class="was"><span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span></div>
+          <ul><li>Charged in office on the same dates; the card machine adds the fee</li><li><b>The card fee can't be claimed on insurance</b></li></ul>
+          <div class="tick"><i></i>I choose this</div></div>` : ""}
+        ${c.planOnly ? `<div class="tier"><span class="t">Option 3 · Pay per visit</span>
+          <div class="amt sm">${money(PRICE_FULL).replace(".00", "")}<small>/ visit</small></div><div class="was">Without care plan pricing</div>
+          <ul><li>Pay at each visit</li><li>Totals for each frequency are in the table above</li></ul>
+          <div class="tick"><i></i>I choose this</div></div>` : ""}
       </div>
-      ${c.n > 1 ? `<p class="paydates num"><b>Payment dates:</b> ${c.pays.map((p, i) => i === 0 ? "first visit" : shortD(p.date)).join(" · ")}</p>` : ""}
+      ${c.n > 1 ? `<p class="paydates num"><b>Payment dates for options 2A and 2B:</b> ${c.pays.map((p, i) => i === 0 ? "first visit" : shortD(p.date)).join(" · ")}</p>` : ""}
     </section>` : "";
   $("p1").innerHTML = `${mast()}
     <section class="who"><div><div class="k">Care plan for</div><h2>${esc(first || "Patient")} ${esc(last)}</h2></div>

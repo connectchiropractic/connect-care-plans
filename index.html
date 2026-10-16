@@ -263,6 +263,25 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp th small { display: block; font-weight: 500; font-size: 10.5px; color: var(--faint); }
 .cmp .ppvc { color: var(--soft); }
 .tiers.four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tiers.grouped { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.tiers.grouped.one { grid-template-columns: minmax(0, 340px); }
+.tgroup { border: 1px solid var(--rule); border-radius: 10px; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 6px; }
+.tgroup .t { font: 600 11.5px var(--body); color: var(--soft); }
+.tgroup .amt { font: 800 30px/1 var(--display); letter-spacing: -.022em; color: var(--ink); }
+.tgroup .amt.sm { font-size: 24px; }
+.tgroup .amt small { font: 700 13px var(--body); color: var(--soft); margin-left: 4px; letter-spacing: 0; }
+.tg-note { margin: 0; font-size: 12px; color: var(--soft); }
+.tg-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; flex: 1; }
+.tg-row .sub { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.tg-row .sub > b { font: 700 13.5px var(--display); color: var(--ink); }
+.tg-row .sub p { margin: 0; font-size: 12px; color: var(--soft); flex: 1; }
+.tg-row .sub p b { color: var(--ink); font-weight: 700; }
+body.pv .tgroup { padding: 14px 12px 10px; }
+body.pv .tgroup .amt { font-size: 26px; }
+body.pv .tgroup .amt.sm { font-size: 21px; }
+body.pv .tg-row .sub { padding: 8px 10px; }
+body.pv .tg-row .sub p { font-size: 11px; }
+@media (max-width: 700px) { .tiers.grouped, .tg-row { grid-template-columns: minmax(0, 1fr); } }
 .tiers.four .tier .t { letter-spacing: 0; white-space: nowrap; }
 .tier .amt.sm { font-size: 24px; }
 .tier .amt.sm small { font-size: 12px; }
@@ -905,7 +924,7 @@ const mast = () => `<header class="mast"><div class="logo"><img src="${S.audienc
 
 // Plain-text note for the patient's file: plan, frequency, fee, how they're paying, and every date.
 // How the team names the payment options: 1 = pay in full, 2A = instalments by bank (PAD), 2B = by card, 3 = pay per visit.
-const CHOICES = [["full", "1 · Pay in full"], ["bank", "2A · Bank (PAD)"], ["card", "2B · Credit card"], ["ppv", "3 · Pay per visit (if asked)"]];
+const CHOICES = [["full", "1 · Pay in full"], ["bank", "2A · Monthly, bank (PAD)"], ["card", "2B · Monthly, card"], ["ppv", "3 · Pay per visit (if asked)"]];
 function fileNote(c, name, kid) {
   const d = x => long(x), L = [];
   const freq = c.rows.map(r => `${r.t} for ${r.w} weeks`).join(", then ");
@@ -992,21 +1011,22 @@ function render() {
   const shortD = d => d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
   const payBlock = onePage ? `<section class="sec">
       <div class="h3"><h3>How would you like to pay?</h3><span>Payment 1 is at the first visit</span></div>
-      <div class="tiers">
+      <div class="tiers grouped">
         <div class="tier"><span class="t">Option 1 · Pay in full</span>
           <div class="amt sm">1 payment</div><div class="was"><span class="pill quiet">No fee</span></div>
           <ul><li>Paid at the first visit</li><li><b>No processing fee, even by credit card</b></li></ul>
           <div class="tick"><i></i>I choose this</div></div>
-        ${c.n > 1 ? `<div class="tier"><span class="t">Option 2A · Monthly, bank</span>
-          <div class="amt sm">${c.n} payments</div><div class="was"><span class="pill quiet">No fee</span></div>
-          <ul><li>First payment at the first visit</li><li>Then withdrawn through GoCardless on the ${drawDay1} of each month</li></ul>
-          <div class="tick"><i></i>I choose this</div></div>
-        <div class="tier"><span class="t">Option 2B · Monthly, card</span>
-          <div class="amt sm">${c.n} payments</div><div class="was"><span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span></div>
-          <ul><li>Charged in office on the same dates; the card machine adds the fee</li><li><b>The card fee can't be claimed on insurance</b></li></ul>
-          <div class="tick"><i></i>I choose this</div></div>` : ""}
+        ${c.n > 1 ? `<div class="tgroup"><span class="t">Option 2 · Monthly instalments</span>
+          <div class="amt sm">${c.n} payments</div>
+          <p class="tg-note">First payment at the first visit, then monthly. Choose how:</p>
+          <div class="tg-row">
+            <div class="sub"><b>A · Bank withdrawal</b><span class="pill quiet">No fee</span>
+              <p>Withdrawn through GoCardless on the ${drawDay1} of each month</p><div class="tick"><i></i>I choose this</div></div>
+            <div class="sub"><b>B · Credit card</b><span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span>
+              <p>Charged in office on the same dates. <b>The card fee can't be claimed on insurance.</b></p><div class="tick"><i></i>I choose this</div></div>
+          </div></div>` : ""}
       </div>
-      ${c.n > 1 ? `<p class="paydates num"><b>Payment dates for options 2A and 2B:</b> ${c.pays.map((p, i) => i === 0 ? "first visit" : shortD(p.date)).join(" · ")}</p>` : ""}
+      ${c.n > 1 ? `<p class="paydates num"><b>Payment dates for option 2:</b> ${c.pays.map((p, i) => i === 0 ? "first visit" : shortD(p.date)).join(" · ")}</p>` : ""}
     </section>` : "";
   $("p1").innerHTML = `${mast()}
     <section class="who"><div><div class="k">Care plan for</div><h2>${esc(first || "Patient")} ${esc(last)}</h2></div>
@@ -1074,7 +1094,7 @@ function render() {
     <section class="who"><div><div class="k">Investment options</div><h2>${kid ? `Investing in ${poss(first)} care` : "Your investment"}</h2></div>
       <div class="tf">Program fee<b class="num">${money(c.total)}</b>${c.collSave ? `<small class="csm">Connect Collective · you save ${money(c.collSave)}</small>` : ""}<small>${c.visits} visits · ${exams} exam${exams > 1 ? "s" : ""} · ${c.weeks} weeks</small></div></section>
 
-    <div class="tiers ${inst ? "" : "one"}">
+    <div class="tiers grouped ${inst ? "" : "one"}">
       <div class="tier ${c.disc ? "best" : ""}">
         ${c.disc ? `<span class="flag">Best value</span>` : ""}
         <span class="t">Option 1 · Pay in full</span>
@@ -1087,25 +1107,16 @@ function render() {
         </ul>
         <div class="tick"><i></i>I choose this</div>
       </div>
-      ${inst ? `<div class="tier">
-        <span class="t">Option 2A · Instalments by bank</span>
+      ${inst ? `<div class="tgroup">
+        <span class="t">Option 2 · Monthly instalments</span>
         <div class="amt num">${money(c.pays[0].amt)}<small>× ${c.n}</small></div>
-        <div class="was num">Total ${money(c.total)}<span class="pill quiet">No fee</span></div>
-        <ul>
-          <li>First payment at your first visit</li>
-          <li>Then automatic withdrawals on the ${drawDay} of each month</li>
-        </ul>
-        <div class="tick"><i></i>I choose this</div>
-      </div>
-      <div class="tier">
-        <span class="t">Option 2B · Instalments by card</span>
-        <div class="amt num">${money(c.pays[0].amt)}<small>× ${c.n}</small></div>
-        <div class="was num">Total ${money(c.total)}<span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span></div>
-        <ul>
-          <li class="num">Charged in office on the same dates. The card machine adds the ${CARD_FEE}% fee (about ${money(cardFee)} total)</li>
-          <li><b>The card fee can't be claimed on insurance</b></li>
-        </ul>
-        <div class="tick"><i></i>I choose this</div>
+        <p class="tg-note num">Total ${money(c.total)}. First payment at your first visit, then monthly. Choose how:</p>
+        <div class="tg-row">
+          <div class="sub"><b>A · Bank withdrawal</b><span class="pill quiet">No fee</span>
+            <p>Automatic withdrawals through GoCardless on the ${drawDay} of each month</p><div class="tick"><i></i>I choose this</div></div>
+          <div class="sub"><b>B · Credit card</b><span class="pill quiet cardfee">+ ${CARD_FEE}% card fee</span>
+            <p class="num">Charged in office on the same dates, about ${money(cardFee)} in fees in total. <b>The card fee can't be claimed on insurance.</b></p><div class="tick"><i></i>I choose this</div></div>
+        </div>
       </div>` : ""}
     </div>
 

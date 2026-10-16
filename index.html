@@ -253,6 +253,8 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp th:first-child, .cmp td:first-child { text-align: left; padding-left: 0; }
 .cmp td { text-align: right; padding: 9px 0 9px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap; vertical-align: middle; }
 .cmp td:first-child { white-space: normal; font-weight: 700; color: var(--ink); }
+.cmp td.save { color: var(--green); font-weight: 800; }
+.cmp th small s { color: var(--faint); }
 .cmp td small { display: block; font-weight: 600; font-size: 11px; color: var(--green); }
 .cmp tr.on td { background: var(--mint2); }
 .cmp .tick { justify-content: flex-end; padding: 0; }
@@ -998,8 +1000,8 @@ function render() {
     ${c.cmpRows.length ? `<section class="sec">
       <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), re-examination included</span></div>
       <table class="cmp num">
-        <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${money(c.price)} per visit</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th><th></th></tr></thead>
-        <tbody>${c.cmpRows.map(r => `<tr><td>${r.label}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)} per visit${c.collSave ? " · Connect Collective" : ""}</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th>${c.collSave ? "<th>Member savings</th>" : ""}<th></th></tr></thead>
+        <tbody>${c.cmpRows.map(r => `<tr><td>${r.label}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.collSave ? `<td class="save">${money(r.ppv - r.fee)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
     </section>` : ""}
 

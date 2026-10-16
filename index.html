@@ -264,6 +264,8 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp tr.on td { background: var(--mint2); }
 .cmp .tick { justify-content: flex-end; padding: 0; }
 .cmpbox { display: grid; gap: 6px; }
+.progrow { display: grid; grid-template-columns: minmax(0, 1fr) 90px; align-items: center; gap: 10px; }
+.progrow[hidden], #extraWrap[hidden] { display: none; }
 .paper[hidden] { display: none !important; }
 .cmp th small { display: block; font-weight: 500; font-size: 10.5px; color: var(--faint); }
 .cmp .ppvc { color: var(--soft); }
@@ -560,8 +562,10 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <div class="price"><span>Price per visit</span><b class="num" id="priceOut"></b><small id="priceWhy"></small></div>
       <div class="two">
         <label>Progress examinations<select id="nProg"><option value="0">None</option><option value="1" selected>1</option><option value="2">2</option></select></label>
-        <div class="pa"><label>At visit<input id="pa0" type="number" min="1" step="1"></label><label>and visit<input id="pa1" type="number" min="1" step="1"></label></div>
       </div>
+      <label class="progrow" id="pa0row">Progress examination at visit<input id="pa0" type="number" min="1" step="1"></label>
+      <label class="cc" id="extraWrap"><input type="checkbox" id="extraProg"> <span>Add an extra progress examination<small>Choose the visit it falls on below</small></span></label>
+      <label class="progrow" id="pa1row">Extra progress examination at visit<input id="pa1" type="number" min="1" step="1"></label>
       <p class="hint" id="progHint"></p>
       <p class="hint">Every plan also includes a re-examination at the end.</p>
       <div class="lbl">Included with their care</div>
@@ -767,7 +771,9 @@ $("brkRows").addEventListener("click", e => { const i = e.target.dataset.brm; if
 $("addBrk").onclick = () => { const last = S.breaks[S.breaks.length - 1]; const d = parse(last.d) || new Date();
   S.breaks.push({ d: iso(addDays(d, 28)), w: 1 }); saveClosures(); drawBreaks(); render(); };
 drawBreaks();
-$("f").addEventListener("input", e => { if (/^pa\d$/.test(e.target.id)) S.progManual = true; render(); });
+// "Add an extra progress examination" simply switches between 1 and 2 progress exams.
+$("extraProg").addEventListener("change", e => { $("nProg").value = e.target.checked ? "2" : "1"; render(); });
+$("f").addEventListener("input", e => { if (e.target.id === "extraProg") return; if (/^pa\d$/.test(e.target.id)) S.progManual = true; render(); });
 $("f").addEventListener("submit", e => e.preventDefault());
 // Before printing: switch to the print layout and shrink any page that would not fit on one
 // letter sheet (10in of height inside the margins), so a plan is always exactly two pages.
@@ -971,8 +977,10 @@ function compute() {
   const sixMonthVisit = Math.max(1, schedule.slice(0, Math.round(YEARLY_WEEKS / 2)).reduce((a, b) => a + b, 0));
   const suggested = yearly && nProg >= 1 ? [sixMonthVisit, ...suggestProg(rows, visits, nProg).slice(1)].slice(0, nProg) : suggestProg(rows, visits, nProg);
   if (!S.progManual) suggested.forEach((v, i) => $("pa" + i).value = v);
-  $("pa0").parentElement.hidden = nProg < 1;
-  $("pa1").parentElement.hidden = nProg < 2;
+  $("pa0row").hidden = nProg < 1;
+  $("pa1row").hidden = nProg < 2;
+  $("extraWrap").hidden = nProg < 1;
+  $("extraProg").checked = nProg >= 2;
   const progAt = Array.from({ length: nProg }, (_, i) => Math.min(visits, Math.max(1, parseInt($("pa" + i).value) || suggested[i])));
   const visitFee = r2(visits * price), progFee = r2(nProg * price), reFee = price;   // every plan ends with a re-examination
   const total = r2(visitFee + progFee + reFee);

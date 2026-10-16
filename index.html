@@ -264,6 +264,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp tr.on td { background: var(--mint2); }
 .cmp .tick { justify-content: flex-end; padding: 0; }
 .cmpbox { display: grid; gap: 6px; }
+.progbox { display: grid; gap: 8px; padding-top: 4px; border-top: 1px solid var(--rule); }
 .progrow { display: grid; grid-template-columns: minmax(0, 1fr) 90px; align-items: center; gap: 10px; }
 .progrow[hidden], #extraWrap[hidden] { display: none; }
 .paper[hidden] { display: none !important; }
@@ -552,14 +553,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <button type="button" class="add" id="addBand">+ Add another band</button>
       <div class="btot"><span>Total</span><b class="num" id="btot"></b></div>
       <div id="cmpBox" class="cmpbox"></div>
-      <label class="cc"><input type="checkbox" id="brk"> <span>Office closed during this plan<small>Adds the closed weeks to the time frame. No visits or payments change.</small></span></label>
-      <div id="brkFields" class="brklist" hidden><div id="brkRows"></div>
-        <button type="button" class="add" id="addBrk">+ Add another closure</button></div>
-    </section>
-
-    <section class="step"><h2><b>5</b>Exams & fees</h2>
-      <label class="cc" id="ccWrap"><input type="checkbox" id="cc"> <span>Connect Collective pricing<small>Family & friends of a practice member</small></span></label>
-      <div class="price"><span>Price per visit</span><b class="num" id="priceOut"></b><small id="priceWhy"></small></div>
+      <div class="progbox">
       <div class="two">
         <label>Progress examinations<select id="nProg"><option value="0">None</option><option value="1" selected>1</option><option value="2">2</option></select></label>
       </div>
@@ -568,6 +562,15 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <label class="progrow" id="pa1row">Extra progress examination at visit<input id="pa1" type="number" min="1" step="1"></label>
       <p class="hint" id="progHint"></p>
       <p class="hint">Every plan also includes a re-examination at the end.</p>
+      </div>
+      <label class="cc"><input type="checkbox" id="brk"> <span>Office closed during this plan<small>Adds the closed weeks to the time frame. No visits or payments change.</small></span></label>
+      <div id="brkFields" class="brklist" hidden><div id="brkRows"></div>
+        <button type="button" class="add" id="addBrk">+ Add another closure</button></div>
+    </section>
+
+    <section class="step"><h2><b>5</b>Fees & included</h2>
+      <label class="cc" id="ccWrap"><input type="checkbox" id="cc"> <span>Connect Collective pricing<small>Family & friends of a practice member</small></span></label>
+      <div class="price"><span>Price per visit</span><b class="num" id="priceOut"></b><small id="priceWhy"></small></div>
       <div class="lbl">Included with their care</div>
       <label class="cc" id="inPHwrap"><input type="checkbox" id="inPH" checked> <span>PracticeHub app<small>Reminders, calendar sync, exercise library, mobility tests</small></span></label>
       <label class="cc" id="inMPwrap"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>

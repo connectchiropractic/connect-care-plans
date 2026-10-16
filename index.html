@@ -502,7 +502,7 @@ const INCLUDED = [
 // Values are FREQS positions: 4 = 5–7 days, 5 = 8–10 days, 6 = 10–14 days, 7 = 18–21 days, 8 = 25–28 days.
 // Optimize and Maintain run for a set timeframe; every frequency is counted over it.
 const TIMEFRAMES = [{ label: "6 months", w: 26 }, { label: "1 year", w: 52 }];
-const COMPARE = { Optimize: { on: [4, 5], extra: [] }, Maintain: { on: [6, 7], extra: [8] } };
+const COMPARE = { Optimize: { on: [4, 5] }, Maintain: { on: [6, 7] } };
 const PROMISE_PHASE = "Reconnect";   // the Connect Care Promise is only offered on Reconnect plans
 const PROGRESS_EXAM_PHASES = ["Reconnect"];   // progress exams are on by default here; later phases start at None
 const VISIT_CHART_PHASE = "Reconnect";   // the week-by-week visit chart only shows on the first plan
@@ -545,7 +545,8 @@ function drawCompare() {
   const cmp = COMPARE[S.phase];
   $("bands").hidden = $("addBand").hidden = !!cmp;
   if (!cmp) { $("cmpBox").innerHTML = ""; return; }
-  const b = S.bands[0], all = [...cmp.on, ...cmp.extra];
+  // Any day-interval frequency can be the plan or a comparison; the phase's usual pair starts ticked.
+  const b = S.bands[0], all = FREQS.map((f, q) => q).filter(q => FREQS[q][1].startsWith("Every "));
   $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips">${TIMEFRAMES.map(t =>
       `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
     <div class="lbl">Plan on page 2</div><div class="chips">${all.map(q =>

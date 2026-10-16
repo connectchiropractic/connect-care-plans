@@ -1,7 +1,7 @@
 # Connect Care Plan Maker
 
 The tool the CAs use to build a patient's care plan and investment options,
-served by GitHub Pages at https://careplans.connectchiropractic.com
+served by GitHub Pages at https://careplan.connectchiropractic.com
 
 - `index.html` is the whole app. Practice rules (prices, the 5% pay-in-full
   reduction, card fee, payment dates, visit frequencies) sit at the top of its

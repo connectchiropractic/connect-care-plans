@@ -391,6 +391,7 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .incl-row { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 6px 28px; }
 .incl-row div { display: grid; gap: 1px; font-size: 12.5px; color: var(--soft); }
 .incl-row .it { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; }
+.incl-row .it.featured { border: 1.5px solid var(--green); border-radius: 10px; padding: 8px 10px; align-self: start; }
 .incl-row .ic { width: 24px; height: 24px; fill: none; stroke: var(--green); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
 .incl-row b { font: 700 13.5px var(--body); color: var(--ink); }
 .pill.bonus { font-size: 10px; padding: 1px 7px; white-space: nowrap; display: table; margin: 3px 0 1px; }
@@ -680,10 +681,13 @@ function chips(el, items, isOn, onPick) {
   el.innerHTML = items.map((it, i) => `<button type="button" class="chip" data-i="${i}" aria-pressed="${isOn(it, i)}">${it.label}</button>`).join("");
   el.onclick = e => { const b = e.target.closest("button"); if (b) { onPick(items[+b.dataset.i], +b.dataset.i); drawForm(); render(); } };
 }
+// Adult Rebuild plans get the Neuro Movement session with Tyler automatically (the CA can still untick it).
+const AUTO_BONUS = { id: "inNM", phase: "Rebuild", audience: "Adult" };
+function autoBonus() { $(AUTO_BONUS.id).checked = S.phase === AUTO_BONUS.phase && S.audience === AUTO_BONUS.audience; }
 function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
-    it => { S.audience = it.v; $("inKG").checked = it.v === "Kids"; document.body.classList.toggle("kids", it.v === "Kids"); });
-  chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
+    it => { S.audience = it.v; $("inKG").checked = it.v === "Kids"; autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
+  chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
       const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.cur = -1; S.pick = -1;
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
       else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
@@ -1161,7 +1165,7 @@ function render() {
       <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at ${c.collective ? `your Connect Collective rate of ${money(c.price)} per visit` : "the standard per-visit rate"}. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
-    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length === 4 ? 2 : incl.length}">${incl.map(x => `<div class="it">${icon(x.id)}<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}${x.tag ? ` <span class="pill bonus">${x.tag}</span>` : ""}${isBonus(x) ? ` <span class="pill bonus inl">Bonus</span>` : ""}</b><span>${x.desc}</span></div></div>`).join("")}</div></section>` : ""}
+    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length === 4 ? 2 : incl.length}">${incl.map(x => `<div class="it${x.value ? " featured" : ""}">${icon(x.id)}<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}${x.tag ? ` <span class="pill bonus">${x.tag}</span>` : ""}${isBonus(x) ? ` <span class="pill bonus inl">Bonus</span>` : ""}</b><span>${x.desc}</span></div></div>`).join("")}</div></section>` : ""}
     ${onePage ? `<p class="terms-note">The terms and policies of your Connect care agreement continue to apply. Ask us anytime for a copy.</p>
     <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>`
     : `<div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>`}

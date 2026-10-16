@@ -425,7 +425,7 @@ body.pv .pol li { margin-bottom: 5px; }
 <body>
 <div class="app">
   <form class="rail" id="f" autocomplete="off">
-    <div><h1>Care Plan Maker</h1><p>Fill in the steps. The plan on the right updates as you go.</p></div>
+    <div><h1>Connect Care Plan Maker</h1><p>Fill in the steps. The plan on the right updates as you go.</p></div>
     <details class="reopen"><summary>Reopen a saved plan</summary><div>
       <label>Plan code from the patient's file note<input id="planCode" placeholder="CP1-…" autocomplete="off" spellcheck="false"></label>
       <button type="button" class="btn go" id="loadCode">Reopen</button>
@@ -924,7 +924,7 @@ function render() {
   const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));
   if (!offer.some(([v]) => v === S.choice)) S.choice = "full";
   $("choice").innerHTML = offer.map(([v, t]) => `<button type="button" class="chip" data-ch="${v}" aria-pressed="${v === S.choice}">${t}</button>`).join("");
-  $("note").value = fileNote(c, full, S.audience === "Kids") + `\n\nPlan code (paste into the Care Plan Maker to reopen this plan):\n${planCode()}`;
+  $("note").value = fileNote(c, full, S.audience === "Kids") + `\n\nPlan code (paste into the Connect Care Plan Maker to reopen this plan):\n${planCode()}`;
   $("pays").innerHTML = `<div class="ph2"><b></b><span></span><span>Charge</span></div>` +
     c.pays.map((p, i) => `<div><b>${i + 1}</b><span>${i === 0 ? "In office" : long(p.date)}</span><span class="num">${money(p.amt)}</span></div>`).join("") + `<p class="paynote">Card payments: charge these amounts. The card machine adds the ${CARD_FEE}% fee itself, so never add it by hand.</p>`;
 

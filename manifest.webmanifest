@@ -1,6 +1,6 @@
 {
  "name": "Connect Care Plan Maker",
- "short_name": "Care Plans",
+ "short_name": "Connect Care Plans",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",

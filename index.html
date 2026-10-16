@@ -306,12 +306,8 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .incl-row b { font: 700 13.5px var(--body); color: var(--ink); }
 .lbl { font: 600 12px var(--ui); color: var(--soft); margin-top: 4px; }
 @media (max-width: 600px) { .incl-row { grid-template-columns: minmax(0, 1fr); } }
-/* Connect Kids plans: the Kids logo, and headings in a hand-lettered face that matches it */
-body.kids .who h2, body.kids .h3 h3, body.kids .promise h3, body.kids .incl h4, body.kids .op h4 { font-family: "Patrick Hand", "Comic Sans MS", cursive; font-weight: 400; letter-spacing: 0; }
-body.kids .who h2 { font-size: clamp(32px, 5.5vw, 46px); }
-body.kids .h3 h3, body.kids .promise h3 { font-size: 23px; }
-body.kids .incl h4 { font-size: 18px; }
-body.pv.kids .h3 h3, body.pv.kids .promise h3 { font-size: 20px; }
+/* Connect Kids plans: the Kids logo, and the child's name in a hand-lettered face that matches it */
+body.kids #p1 .who h2 { font-family: "Patrick Hand", "Comic Sans MS", cursive; font-weight: 400; letter-spacing: 0; font-size: clamp(34px, 5.8vw, 50px); }
 .mk:last-child span { left: auto; right: 0; transform: none; }
 .mk { flex: 0 0 1.5px; align-self: stretch; background: var(--ink); position: relative; margin: 0 2px; }
 .mk span { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 3px; font: 600 9.5px var(--body); color: var(--ink); white-space: nowrap; }
@@ -696,6 +692,10 @@ function render() {
   const c = compute();
   const last = $("last").value.trim(), first = $("first").value.trim();
   const full = [last, first].filter(Boolean).join(", ") || "Patient";
+  // On Connect Kids plans, headings speak about the child by name ("Alex's visits").
+  const kid = S.audience === "Kids" && first;
+  const poss = n => n + (/s$/i.test(n) ? "’" : "’s");
+  const Whose = kid ? poss(first) : "Your", whose = kid ? poss(first) : "your";
   const mon = c.start.toLocaleDateString("en-CA", { month: "short", year: "numeric" });
   $("fname").textContent = `${full} - ${TM[S.phase] || S.phase} ${c.visits}v [${c.price}] ${mon}`;
 
@@ -722,7 +722,7 @@ function render() {
   const brkNote = c.brkW ? `<p class="brk-note"><i></i>Office closed ${shortDate(c.brkDate)} – ${shortDate(addDays(c.brkDate, c.brkW * 7 - 1))} (${c.brkW} week${c.brkW > 1 ? "s" : ""}). Your time frame includes this break.</p>` : "";
   const jIdx = JOURNEY.findIndex(j => j.phases.includes(S.phase));
   const incl = INCLUDED.filter(x => $(x.id).checked);
-  const journey = `<section class="journey" aria-label="Your care journey"><div class="jhead"><span>Your journey · The Connect Care Process™</span></div>
+  const journey = `<section class="journey" aria-label="Your care journey"><div class="jhead"><span>${Whose} journey · The Connect Care Process™</span></div>
     <div class="path">${JOURNEY.map((j, i) => `${i ? `<span class="link ${i <= jIdx ? "done" : ""}"></span>` : ""}<span class="stop ${i < jIdx ? "done" : i === jIdx ? "now" : "next"}"><i>${i < jIdx ? "✓" : ""}</i>${j.name}${i === jIdx ? `<span class="here">You are here</span>` : ""}</span>`).join("")}</div></section>`;
   const freqRows = c.rows.filter(r => r.w).map(r => `<tr><td>${r.t}</td><td class="num">${r.w} weeks</td><td class="num">${r.v} visits</td></tr>`).join("");
 
@@ -732,7 +732,7 @@ function render() {
     ${journey}
 
     <section class="sec">
-      <div class="h3"><h3>Your visits</h3><span>${c.weeks} weeks · ${c.visits} visits</span></div>
+      <div class="h3"><h3>${Whose} visits</h3><span>${c.weeks} weeks · ${c.visits} visits</span></div>
       ${S.phase === VISIT_CHART_PHASE ? `<div class="weeks" aria-label="One column per week, one dot per visit">${weeksHtml}</div>` : ""}${brkNote}
       <table class="plan"><tbody>${freqRows}</tbody>
         <tfoot><tr><td>Total</td><td class="num">${c.weeks} weeks</td><td class="num">${c.visits} visits</td></tr></tfoot></table>
@@ -749,7 +749,7 @@ function render() {
         <div class="cside"><span>Standard price</span><b class="num"><s>${money(PRICE_FULL)}</s> per visit</b><b class="num big"><s>${money(c.stdTotal)}</s></b></div>
         <div class="cside you"><span>Your Connect Collective price</span><b class="num">${money(c.price)} per visit</b><b class="num big">${money(c.total)}</b></div>
         <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>` : ""}
-      <div class="fee"><span>Your program fee${c.collective ? " · Connect Collective pricing" : ""}</span><b class="num">${money(c.total)}</b></div>
+      <div class="fee"><span>${Whose} program fee${c.collective ? " · Connect Collective pricing" : ""}</span><b class="num">${money(c.total)}</b></div>
     </section>
 
     ${S.phase === PROMISE_PHASE && c.nProg ? `<section class="promise">
@@ -766,7 +766,7 @@ function render() {
       <p class="small">Terms: valid only through the first Progress Examination${c.progAt[0] ? ` (visit ${c.progAt[0]})` : ""}. Request must be made in person or by email within 24 hours of that visit. Completed visits are billed at the standard per-visit rate. This is a service satisfaction guarantee; medical outcomes are not guaranteed.</p>
     </section>` : ""}
 
-    ${incl.length ? `<section class="incl"><h4>Included with your care</h4><div class="incl-row" style="--cols:${incl.length}">${incl.map(x => `<div><b>${x.name}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
+    ${incl.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${incl.length}">${incl.map(x => `<div><b>${x.name}</b><span>${x.desc}</span></div>`).join("")}</div></section>` : ""}
     <div class="init"><div><span>Client initials</span></div><div><span>Doctor initials</span></div></div>
     <div class="foot"><span>Page 1 of 2 · Care plan</span><span>${esc(full)}</span></div>`;
 
@@ -779,7 +779,7 @@ function render() {
   const short = d => d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
   const exams = c.nProg + 1;
   $("p2").innerHTML = `${mast()}
-    <section class="who"><div><div class="k">Investment options</div><h2>Your investment</h2></div>
+    <section class="who"><div><div class="k">Investment options</div><h2>${kid ? `Investing in ${poss(first)} care` : "Your investment"}</h2></div>
       <div class="tf">Program fee<b class="num">${money(c.total)}</b>${c.collSave ? `<small class="csm">Connect Collective · you save ${money(c.collSave)}</small>` : ""}<small>${c.visits} visits · ${exams} exam${exams > 1 ? "s" : ""} · ${c.weeks} weeks</small></div></section>
 
     <div class="tiers ${inst ? "" : "one"}">

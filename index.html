@@ -252,6 +252,8 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp tr.on td { background: var(--mint2); }
 .cmp .tick { justify-content: flex-end; padding: 0; }
 .cmpbox { display: grid; gap: 6px; }
+#note { font: 500 12px/1.5 ui-monospace, Menlo, monospace; color: var(--ink); background: var(--field); border: 1px solid var(--rule); border-radius: 7px; padding: 10px; width: 100%; resize: vertical; white-space: pre; overflow-x: auto; }
+#copyNote { justify-self: start; }
 #bands[hidden], #addBand[hidden] { display: none; }
 .coll-note { margin: 6px 0 0; font-size: 12px; color: var(--soft); }
 .ppv { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: baseline; border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; font-size: 12.5px; color: var(--soft); }
@@ -400,7 +402,7 @@ body.pv .pol li { margin-bottom: 5px; }
 <body>
 <div class="app">
   <form class="rail" id="f" autocomplete="off">
-    <div><h1>Care Plan Maker</h1><p>Fill in the six steps. The plan on the right updates as you go.</p></div>
+    <div><h1>Care Plan Maker</h1><p>Fill in the steps. The plan on the right updates as you go.</p></div>
 
     <section class="step"><h2><b>1</b>Plan type</h2>
       <div class="chips" id="audience"></div>
@@ -447,6 +449,14 @@ body.pv .pol li { margin-bottom: 5px; }
     <section class="step"><h2><b>6</b>Payments</h2>
       <p class="hint">Worked out for you: one payment for every 4 weeks of the plan. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
       <div class="pays" id="pays"></div>
+    </section>
+
+    <section class="step"><h2><b>7</b>Note for the patient file</h2>
+      <div class="lbl">Patient chose</div>
+      <div class="chips" id="choice"></div>
+      <textarea id="note" rows="14" readonly aria-label="Note for the patient file"></textarea>
+      <button type="button" class="btn go" id="copyNote">Copy note</button>
+      <p class="hint">Paste it into the patient's notes in PracticeHub so the team can see the plan and payment dates.</p>
     </section>
   </form>
 
@@ -502,7 +512,7 @@ const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the 
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
 
 /* ---------- state ---------- */
-const S = { cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
+const S = { choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const money = v => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
@@ -591,6 +601,13 @@ function unfitPages() {
 }
 window.addEventListener("beforeprint", fitPages);
 window.addEventListener("afterprint", unfitPages);
+$("choice").addEventListener("click", e => { const b = e.target.closest("[data-ch]"); if (b) { S.choice = b.dataset.ch; render(); } });
+$("copyNote").onclick = async () => {
+  const b = $("copyNote");
+  try { await navigator.clipboard.writeText($("note").value); b.textContent = "Copied"; }
+  catch { $("note").select(); b.textContent = "Selected, press ⌘C"; }
+  setTimeout(() => b.textContent = "Copy note", 1800);
+};
 $("print").onclick = () => { fitPages(); window.print(); };
 // Save PDF: builds the two pages into a letter-size PDF in the browser and downloads it,
 // named like the old files, with no print window. Each page is laid out exactly as it prints.
@@ -742,6 +759,38 @@ const LOGO_KIDS = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABMMAAAEnCAYAAAC
 const mast = () => `<header class="mast"><div class="logo"><img src="${S.audience === "Kids" ? LOGO_KIDS : LOGO_ADULT}" alt="${S.audience === "Kids" ? "Connect Kids" : "Connect Chiropractic"}"></div>
   <div class="tagline">Home of <b>The Connect Care Process™</b></div></header>`;
 
+// Plain-text note for the patient's file: plan, frequency, fee, how they're paying, and every date.
+const CHOICES = [["full", "Pay in full"], ["bank", "Bank (GoCardless)"], ["card", "Credit card"], ["ppv", "Pay per visit"]];
+function fileNote(c, name, kid) {
+  const d = x => long(x), L = [];
+  const freq = c.rows.map(r => `${r.t} for ${r.w} weeks`).join(", then ");
+  const choice = S.choice === "ppv" && !c.planOnly ? "full" : S.choice;
+  L.push(`CARE PLAN · ${name}${kid ? " (Connect Kids)" : ""}`);
+  L.push(`Prepared ${d(new Date())}`);
+  L.push(`Phase: ${S.phase}`);
+  L.push(`Visit frequency: ${freq}`);
+  L.push(`Time frame: ${d(c.start)} – ${d(c.end)} (${c.weeks} weeks${c.brkW ? `, plus ${c.brkW} week${c.brkW > 1 ? "s" : ""} office closure` : ""})`);
+  L.push(`Visits: ${c.visits}${c.nProg ? ` · Progress exam${c.nProg > 1 ? "s" : ""} at visit ${c.progAt.join(" & ")}` : ""} · Re-exam after visit ${c.visits}`);
+  if (choice === "ppv") {
+    L.push(`Payment: PAY PER VISIT at ${money(PRICE_FULL)} per visit (no care plan, no Connect Collective pricing)`);
+    L.push(`Estimated total for these visits and exams: ${money(c.stdTotal)}`);
+    return L.join("\n");
+  }
+  L.push(`Price: ${money(c.price)} per visit${c.collective ? " (Connect Collective)" : ""}`);
+  L.push(`Program fee: ${money(c.total)}`);
+  if (choice === "full") {
+    L.push(`Payment: PAY IN FULL at the first visit (${d(c.start)}): ${money(c.full)}${c.disc ? ` (${c.disc}% reduction, saves ${money(c.saving)})` : ""}`);
+    L.push(`No card processing fee on pay in full.`);
+  } else {
+    const card = choice === "card";
+    L.push(`Payment: ${c.n} ${card ? "CREDIT CARD instalments, charged in office" : "BANK instalments, GoCardless withdrawals after the first"}`);
+    c.pays.forEach((p, i) => L.push(`  ${i + 1}. ${d(p.date)}  ${money(p.amt)}${i === 0 ? "  (in office, first visit)" : card ? "  (in office)" : "  (GoCardless)"}`));
+    L.push(`  Total: ${money(c.total)}`);
+    if (card) L.push(`Charge the amounts above. The card machine adds the ${CARD_FEE}% fee itself.`);
+  }
+  return L.join("\n");
+}
+
 function render() {
   document.body.classList.toggle("kids", S.audience === "Kids");
   const c = compute();
@@ -762,6 +811,10 @@ function render() {
   $("ccWrap").classList.toggle("locked", !c.fullPricePhase);
   $("priceOut").textContent = money(c.price);
   $("priceWhy").textContent = !c.fullPricePhase ? `Connect Collective pricing applies to every ${S.phase} plan` : c.collective ? "Connect Collective" : "Standard Reconnect price";
+  const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));
+  if (!offer.some(([v]) => v === S.choice)) S.choice = "full";
+  $("choice").innerHTML = offer.map(([v, t]) => `<button type="button" class="chip" data-ch="${v}" aria-pressed="${v === S.choice}">${t}</button>`).join("");
+  $("note").value = fileNote(c, full, S.audience === "Kids");
   $("pays").innerHTML = `<div class="ph2"><b></b><span></span><span>Charge</span></div>` +
     c.pays.map((p, i) => `<div><b>${i + 1}</b><span>${i === 0 ? "In office" : long(p.date)}</span><span class="num">${money(p.amt)}</span></div>`).join("") + `<p class="paynote">Card payments: charge these amounts. The card machine adds the ${CARD_FEE}% fee itself, so never add it by hand.</p>`;
 

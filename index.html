@@ -261,10 +261,10 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp tr.rec td { border-top: 2px solid var(--green); border-bottom: 2px solid var(--green); }
 .cmp tr.rec td:first-child { border-left: 2px solid var(--green); padding-left: 10px; }
 .cmp tr.rec td:last-child { border-right: 2px solid var(--green); padding-right: 10px; }
-.recbadge { display: table; font: 700 10px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 2px 9px; line-height: 1.4; margin-bottom: 5px; }
+.recbadge { display: table; font: 700 10px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 3px 10px; line-height: 1.3; margin-bottom: 6px; }
 .cmp td em { display: block; font-style: normal; font-weight: 500; font-size: 11px; color: var(--faint); margin-top: 2px; }
-.cmp td.vs, .cmp th.vs { text-align: left; white-space: normal; font-size: 12px; color: var(--soft); width: 38%; }
-.cmp td.vs b { color: var(--ink); }
+.callout { margin-top: 7px; padding: 6px 10px; border-radius: 8px; background: var(--mint2); border: 1px solid var(--mint); font-size: 12.5px; font-weight: 500; color: var(--soft); white-space: normal; }
+.callout b { color: var(--green); }
 .cmp-note { margin: 4px 0 0; font-size: 11.5px; color: var(--soft); }
 .cmp td.save { color: var(--green); font-weight: 800; }
 .cmp th small s { color: var(--faint); }
@@ -445,6 +445,8 @@ body.pv .weeks { padding-top: 13px; }
 body.pv .wk .d { height: 28px; }
 body.pv .plan td { padding: 3px 0; }
 body.pv .cmp td { padding-block: 6px; }
+body.pv .callout { margin-top: 5px; padding: 4px 9px; }
+body.pv .recbadge { margin-bottom: 4px; }
 body.pv .incl { gap: 5px; padding-top: 8px; }
 body.pv .incl-row div { font-size: 11.5px; }
 body.pv .incl-row b { font-size: 12.5px; }
@@ -666,7 +668,7 @@ const INCLUDED = [
 const TIMEFRAMES = [{ label: "6 months", w: 26 }, { label: "1 year", w: 52 }];
 const COMPARE = { Optimize: { on: [4, 5] }, Maintenance: { on: [6, 7] } };
 // Wording for the "Compared to recommended" column on Optimize / Maintenance plans.
-const CMP_WORDS = { badge: "Recommended by Dr. Steve", up: "faster progress", down: "longer to hold the change" };
+const CMP_WORDS = { badge: "Recommended by Dr. Steve" };
 const YEARLY_WEEKS = 52;   // plans this long must include a progress exam around 6 months (CCO)
 const PROMISE_PHASE = "Reconnect";   // the Connect Care Promise is only offered on Reconnect plans
 const PROGRESS_EXAM_PHASES = ["Reconnect"];   // progress exams are on by default here; later phases start at None
@@ -1113,18 +1115,18 @@ function fileNote(c, name, kid) {
 // Optimize / Maintenance frequency table: per-week cost, and every option compared with the recommended one
 // (or the current one if there's no recommendation). Recommended first, then most to least frequent.
 function cmpTable(c) {
-  const ref = c.cmpRows.find(r => r.recommended) || c.cmpRows.find(r => r.current) || null;
   const rows = [...c.cmpRows].sort((a, b) => (b.recommended - a.recommended) || (b.visits - a.visits));
-  const vs = ref ? (ref.recommended ? "Compared to recommended" : "Compared to current") : "";
-  const diff = r => {
-    if (!ref || r === ref) return "";
-    const d = r2(r.perWeek - ref.perWeek), n = Math.abs(r.visits - ref.visits), adj = `${n} ${d < 0 ? "fewer" : "more"} adjustment${n === 1 ? "" : "s"}`;
-    return d < 0 ? `<b>Saves ${money(-d)}/wk</b> (about ${money(-d / 7)} a day) · ${adj} · ${CMP_WORDS.down}`
-                 : `<b>+${money(d)}/wk</b> · ${adj} · ${CMP_WORDS.up}`;
-  };
+  const rec = rows.find(r => r.recommended);
+  // One callout under the recommended row: what it adds over the current frequency
+  // (or the next less frequent option), and what that costs per day.
+  const lower = rec && (rows.find(r => r.current && r.visits < rec.visits) || rows.filter(r => r.visits < rec.visits)[0]);
+  const plain = r => r.label.replace(/\s*\(.*\)/, "").replace(/^\w/, ch => ch.toLowerCase());
+  const perDay = d => d >= 1 ? `$${Math.round(d)}` : money(d);
+  const call = lower ? `<div class="callout"><b>${rec.visits - lower.visits} more adjustment${rec.visits - lower.visits === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
+  const inst = c.nPay > 1;
   return `<table class="cmp num">
-        <thead><tr><th>How often</th><th>Visits</th><th>Per week</th>${ref ? `<th class="vs">${vs}</th>` : ""}<th></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Current frequency</small>` : ""}<em>Total ${money(r.fee)}${c.nPay > 1 ? ` · ${c.nPay} payments of ${money(r.pay)}` : ""}</em></td><td>${r.visits}</td><td>${money(r.perWeek)}</td>${ref ? `<td class="vs">${diff(r)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <thead><tr><th>How often</th><th>Visits</th><th>${inst ? "Monthly payment" : "Total"}</th><th></th></tr></thead>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Current frequency</small>` : ""}${inst ? `<em>Total ${money(r.fee)} · ${c.nPay} payments</em>` : ""}${r.recommended ? call : ""}</td><td>${r.visits}</td><td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
       ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }

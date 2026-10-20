@@ -264,6 +264,7 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp tr.rec td:last-child { border-right: 2px solid var(--green); padding-right: 10px; }
 .recbadge { display: block; width: max-content; font: 700 10px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 3px 10px; line-height: 1.3; margin-bottom: 6px; }
 .cmp td em { display: block; font-style: normal; font-weight: 500; font-size: 11px; color: var(--faint); margin-top: 2px; }
+.cmp td.pif { color: var(--green); font-weight: 700; }
 .callout { margin-top: 7px; padding: 6px 10px; border-radius: 8px; background: var(--mint2); border: 1px solid var(--mint); font-size: 12.5px; font-weight: 500; color: var(--soft); white-space: normal; }
 .callout b { color: var(--green); }
 .cmp-note { margin: 4px 0 0; font-size: 11.5px; color: var(--soft); }
@@ -583,6 +584,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
 
     <section class="step"><h2><b>5</b>Fees</h2>
       <label class="cc" id="ccWrap"><input type="checkbox" id="cc"> <span>Connect Collective pricing<small>Family & friends of a practice member</small></span></label>
+      <label class="cc" id="efWrap"><input type="checkbox" id="examFree" checked> <span>Pay in full: exams at no charge<small>Progress exam and re-examination are free when they pay in full. Instalments still include them.</small></span></label>
       <div class="price"><span>Price per visit</span><b class="num" id="priceOut"></b><small id="priceWhy"></small></div>
     </section>
 
@@ -637,6 +639,7 @@ const PRICE_FULL = 75, PRICE_COLLECTIVE = 65;
 const FULL_PRICE_PHASES = ["Reconnect"];
 const PAY_IN_FULL_REDUCTION = 5;   // percent
 const REDUCTION_PHASES = ["Reconnect"];   // only standard-price Reconnect plans get the pay-in-full reduction
+const EXAMS_FREE_PHASES = ["Optimize", "Maintenance"];   // pay in full: progress exams and re-examination at no charge (staff can untick)
 const CARD_FEE = 2.4;              // percent, on instalments paid by credit card in office
 const WEEKS_PER_PAYMENT = 4;          // one payment for every 4 weeks of the plan
 const MIN_WEEKS_FOR_INSTALMENTS = 7;  // 7+ week plans always get at least 2 payments (5–6 weeks: pay in full)
@@ -859,14 +862,14 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec, ef: +$("examFree").checked
   }));
 }
 function loadPlanCode(code) {
   const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
   if (d.p === "Maintain") d.p = "Maintenance";   // codes made before the rename
   Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1 });
-  $("start").value = d.s; $("cc").checked = !!d.cc; $("nProg").value = String(d.np);
+  $("start").value = d.s; $("cc").checked = !!d.cc; $("examFree").checked = d.ef === undefined ? true : !!d.ef; $("nProg").value = String(d.np);
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
   drawBreaks();
@@ -1030,7 +1033,10 @@ function compute() {
   const planOnly = !fullPricePhase && collSave > 0;
   // The 5% is for standard-price Reconnect plans only; Connect Collective pricing never stacks with it.
   const disc = REDUCTION_PHASES.includes(S.phase) && !collective ? PAY_IN_FULL_REDUCTION : 0;
-  const saving = r2(total * disc / 100), full = r2(total - saving);
+  // Optimize / Maintenance: paying in full takes the exams off the bill.
+  const examFree = EXAMS_FREE_PHASES.includes(S.phase) && $("examFree").checked;
+  const examSave = examFree ? r2(progFee + reFee) : 0;
+  const saving = r2(total * disc / 100 + examSave), full = r2(total - saving);
   const start = parse($("start").value) || new Date();
   // Office closure: closed weeks slot into the schedule where they fall and push the end date out.
   const breaks = [];
@@ -1058,9 +1064,9 @@ function compute() {
   const cmpSet = COMPARE[S.phase] ? (considered().length ? considered() : [S.bands[0].q]) : [];
   const cmpRows = cmpSet.length ? cmpSet.map(q => {
     const v = Math.ceil(weeks * FREQS[q][0] - 1e-9), fee = r2((v + nProg + 1) * price);
-    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), perWeek: r2(fee / weeks), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur, recommended: q === S.rec };
+    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), pif: r2(fee - (examFree ? (nProg + 1) * price : 0)), perWeek: r2(fee / weeks), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur, recommended: q === S.rec };
   }) : [];
-  return { cmpRows, nPay, planOnly, stdTotal, collSave, brkW, breaks, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
+  return { examFree, examSave, cmpRows, nPay, planOnly, stdTotal, collSave, brkW, breaks, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
 }
 
 /* ---------- pages ---------- */
@@ -1100,7 +1106,7 @@ function fileNote(c, name, kid) {
   L.push(`Price: ${money(c.price)} per visit${c.collective ? " (Connect Collective)" : ""}`);
   L.push(`Program fee: ${money(c.total)}`);
   if (choice === "full") {
-    L.push(`Payment: OPTION 1, PAY IN FULL at the first visit (${d(c.start)}): ${money(c.full)}${c.disc ? ` (${c.disc}% reduction, saves ${money(c.saving)})` : ""}`);
+    L.push(`Payment: OPTION 1, PAY IN FULL at the first visit (${d(c.start)}): ${money(c.full)}${c.disc ? ` (${c.disc}% reduction, saves ${money(c.saving)})` : ""}${c.examFree ? ` (exams at no charge, saves ${money(c.examSave)})` : ""}`);
     L.push(`No card processing fee on pay in full.`);
   } else {
     const card = choice === "card";
@@ -1124,12 +1130,12 @@ function cmpTable(c) {
   const plain = r => r.label.replace(/\s*\(.*\)/, "").replace(/^\w/, ch => ch.toLowerCase());
   const perDay = d => d >= 1 ? `$${Math.round(d)}` : money(d);
   const call = lower ? `<div class="callout"><b>${rec.visits - lower.visits} more check-up${rec.visits - lower.visits === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
-  const inst = c.nPay > 1;
+  const inst = c.nPay > 1, pifCol = c.examFree && inst;   // pay in full skips the exams, so it gets its own price
   // Spell out what the total covers, so visits × price adds up on paper.
-  const exams = c.nProg ? `${c.nProg} progress exam${c.nProg > 1 ? "s" : ""} + re-examination` : "re-examination";
+  const exams = c.nProg ? `${c.nProg > 1 ? c.nProg + " progress exams" : "progress exam"} + re-examination` : "re-examination";
   return `<table class="cmp num">
-        <thead><tr><th>How often</th><th>Visits</th><th>${inst ? "Monthly payment" : "Total"}</th><th></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>Total ${money(r.fee)} = ${r.visits} visits + ${exams}${inst ? ` · ${c.nPay} payments` : ""}</em>${r.recommended ? call : ""}</td><td>${r.visits}</td><td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <thead><tr><th>How often</th><th>Visits</th>${pifCol ? "<th>Pay in full</th>" : ""}<th>${inst ? "Monthly payment" : "Total"}</th><th></th></tr></thead>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>Total ${money(r.fee)} = ${r.visits} visits + ${exams}</em>${r.recommended ? call : ""}</td><td>${r.visits}</td>${pifCol ? `<td class="pif">${money(r.pif)}</td>` : ""}<td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
       ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }
@@ -1152,6 +1158,7 @@ function render() {
   $("progHint").textContent = c.weeks >= YEARLY_WEEKS ? `Required on 1-year plans (CCO): a progress exam around 6 months, visit ${c.progAt[0]}.` : c.nProg ? `Suggested from the visit bands. Type over it if Dr. Steve wants a different visit.` : "";
   $("cc").disabled = !c.fullPricePhase;
   $("ccWrap").classList.toggle("locked", !c.fullPricePhase);
+  $("efWrap").hidden = !EXAMS_FREE_PHASES.includes(S.phase);
   $("priceOut").textContent = money(c.price);
   $("priceWhy").textContent = !c.fullPricePhase ? `Connect Collective pricing applies to every ${S.phase} plan` : c.collective ? "Connect Collective" : "Standard Reconnect price";
   const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));
@@ -1193,7 +1200,7 @@ function render() {
       <div class="h3"><h3>How would you like to pay?</h3><span>Payment 1 is at the first visit</span></div>
       <div class="tiers grouped">
         <div class="tier"><span class="t">Option 1 · Pay in full</span>
-          <div class="amt sm">1 payment</div><div class="was"><span class="pill quiet">No fee</span></div>
+          <div class="amt sm">1 payment</div><div class="was">${c.examFree ? `<span class="pill">Save ${money(c.examSave)} on exams</span>` : `<span class="pill quiet">No fee</span>`}</div>
           <ul><li>Paid at the first visit</li><li><b>No processing fee, even by credit card</b></li></ul>
           <div class="tick"><i></i>I choose this</div></div>
         ${c.n > 1 ? `<div class="tgroup"><span class="t">Option 2 · Monthly instalments</span>

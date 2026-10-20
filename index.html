@@ -1122,7 +1122,7 @@ function cmpTable(c) {
   const lower = rec && (rows.find(r => r.current && r.visits < rec.visits) || rows.filter(r => r.visits < rec.visits)[0]);
   const plain = r => r.label.replace(/\s*\(.*\)/, "").replace(/^\w/, ch => ch.toLowerCase());
   const perDay = d => d >= 1 ? `$${Math.round(d)}` : money(d);
-  const call = lower ? `<div class="callout"><b>${rec.visits - lower.visits} more adjustment${rec.visits - lower.visits === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
+  const call = lower ? `<div class="callout"><b>${rec.visits - lower.visits} more check-up${rec.visits - lower.visits === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
   const inst = c.nPay > 1;
   return `<table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th><th>${inst ? "Monthly payment" : "Total"}</th><th></th></tr></thead>

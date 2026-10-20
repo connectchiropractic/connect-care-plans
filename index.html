@@ -572,7 +572,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <button type="button" class="add" id="addBand">+ Add another band</button>
       <div class="btot"><span>Total</span><b class="num" id="btot"></b></div>
       <div id="cmpBox" class="cmpbox"></div>
-      <label class="bcu">Extra check-ups (optional)<select id="extraCU"></select><small>Added to the plan at the visit price.</small></label>
+      <label class="bcu">Boost check-ups (optional)<select id="extraCU"></select><small>Extra check-ups for when they need them most. Charged at the visit price and added to the total.</small></label>
       <div class="progbox">
       <div class="two" id="nProgRow">
         <label>Progress examinations<select id="nProg"><option value="0">None</option><option value="1" selected>1</option><option value="2">2</option></select></label>
@@ -645,7 +645,7 @@ const PRICE_FULL = 75, PRICE_COLLECTIVE = 65;
 const FULL_PRICE_PHASES = ["Reconnect"];
 const PAY_IN_FULL_REDUCTION = 5;   // percent
 const REDUCTION_PHASES = ["Reconnect"];   // only standard-price Reconnect plans get the pay-in-full reduction
-const EXTRA_CHECKUPS_MAX = 12;   // "Extra check-ups" dropdown: optional check-ups added at the visit price (e.g. to use up coverage after a frequency drop)
+const EXTRA_CHECKUPS_MAX = 12;   // "Boost check-ups" dropdown: optional check-ups added at the visit price (e.g. to use up coverage after a frequency drop)
 const EXAMS_FREE_PHASES = ["Optimize", "Maintenance"];   // pay in full: progress exams and re-examination at no charge (staff can untick)
 const CARD_FEE = 2.4;              // percent, on instalments paid by credit card in office
 const WEEKS_PER_PAYMENT = 4;          // one payment for every 4 weeks of the plan
@@ -756,9 +756,9 @@ function drawCompare() {
     <div class="lbl">Also show on the plan</div>${INTERVALS.filter(q => q !== S.cur && q !== S.rec).map(q =>
       `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}
     <p class="hint">The recommended and previous frequencies are always shown. The green box under the recommendation compares it with the previous frequency (or the next less frequent option).</p>
-    ${considered().length ? `<div class="lbl">Extra check-ups (optional)</div>${considered().map(q =>
+    ${considered().length ? `<div class="lbl">Boost check-ups (optional)</div>${considered().map(q =>
       `<label class="xq"><span>${FREQS[q][1]}</span><select data-xq="${q}">${[0, ...Array.from({ length: EXTRA_CHECKUPS_MAX }, (_, i) => i + 1)].map(n =>
-        `<option value="${n}" ${(S.extraQ[q] || 0) === n ? "selected" : ""}>${n ? `+ ${n} extra` : "None"}</option>`).join("")}</select></label>`).join("")}
+        `<option value="${n}" ${(S.extraQ[q] || 0) === n ? "selected" : ""}>${n ? `+ ${n} boost` : "None"}</option>`).join("")}</select></label>`).join("")}
     <p class="hint">Added to that option only, at the visit price. Its total and payments go up to match.</p>` : ""}`;
 }
 $("cmpBox").addEventListener("click", e => {
@@ -784,7 +784,7 @@ $("bands").addEventListener("input", e => { const t = e.target, i = t.dataset.i;
 $("bands").addEventListener("click", e => { const i = e.target.dataset.rm; if (i !== undefined) { S.bands.splice(+i, 1); drawBands(); render(); } });
 $("addBand").onclick = () => { const last = S.bands[S.bands.length - 1]; S.bands.push({ q: Math.min(last.q + 1, FREQS.length - 1), w: 4 }); drawBands(); render(); };
 $("start").value = iso(new Date());
-$("extraCU").innerHTML = `<option value="0">None</option>` + Array.from({ length: EXTRA_CHECKUPS_MAX }, (_, i) => `<option value="${i + 1}">${i + 1} extra check-up${i ? "s" : ""}</option>`).join("");
+$("extraCU").innerHTML = `<option value="0">None</option>` + Array.from({ length: EXTRA_CHECKUPS_MAX }, (_, i) => `<option value="${i + 1}">${i + 1} boost check-up${i ? "s" : ""}</option>`).join("");
 // Office closures: any number, each a start date and a number of weeks.
 S.breaks = [{ d: `${new Date().getFullYear()}-12-21`, w: 2 }];
 // Office closures are the same for every patient, so the last ones used are remembered on this computer.
@@ -1120,7 +1120,7 @@ function fileNote(c, name, kid) {
     return L.join("\n");
   }
   L.push(`Price: ${money(c.price)} per visit${c.collective ? " (Connect Collective)" : ""}`);
-  if (c.extraCU) L.push(`Extra check-ups: ${c.extraCU} × ${money(c.price)} = ${money(c.extraFee)} (included in the program fee)`);
+  if (c.extraCU) L.push(`Boost check-ups: ${c.extraCU} × ${money(c.price)} = ${money(c.extraFee)} (included in the program fee)`);
   L.push(`Program fee: ${money(c.total)}`);
   if (choice === "full") {
     L.push(`Payment: OPTION 1, PAY IN FULL at the first visit (${d(c.start)}): ${money(c.full)}${c.disc ? ` (${c.disc}% reduction, saves ${money(c.saving)})` : ""}${c.examFree ? ` (exams at no charge, saves ${money(c.examSave)})` : ""}`);
@@ -1153,7 +1153,7 @@ function cmpTable(c) {
   const exams = c.nProg ? `${c.nProg > 1 ? c.nProg + " progress exams" : "progress exam"} + re-examination` : "re-examination";
   return `<table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th>${pifCol ? "<th>Pay in full</th>" : ""}<th>${inst ? "Monthly instalments" : "Total"}</th><th></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>${r.visits} visits${r.extra ? ` + ${r.extra} extra check-up${r.extra > 1 ? "s" : ""}` : ""} + ${exams}, ${money(c.price)} each</em>${r.recommended ? call : ""}</td><td>${r.visits}${r.extra ? `<em>+ ${r.extra} extra</em>` : ""}</td>${pifCol ? `<td class="pif">${money(r.pif)}<em>save ${money(r2(r.fee - r.pif))}</em></td>` : ""}<td>${money(inst ? r.pay : r.fee)}${inst ? `<em>× ${c.nPay} = ${money(r.fee)}</em>` : ""}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>${r.visits} visits${r.extra ? ` + ${r.extra} boost check-up${r.extra > 1 ? "s" : ""}` : ""} + ${exams}, ${money(c.price)} each</em>${r.recommended ? call : ""}</td><td>${r.visits}${r.extra ? `<em>+ ${r.extra} boost</em>` : ""}</td>${pifCol ? `<td class="pif">${money(r.pif)}<em>save ${money(r2(r.fee - r.pif))}</em></td>` : ""}<td>${money(inst ? r.pay : r.fee)}${inst ? `<em>× ${c.nPay} = ${money(r.fee)}</em>` : ""}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
       ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }
@@ -1242,10 +1242,10 @@ function render() {
     ${journey}
 
     ${c.cmpRows.length ? "" : `<section class="sec">
-      <div class="h3"><h3>${Whose} visit frequency</h3><span>${c.weeks} weeks · ${c.visits} visits</span></div>
+      <div class="h3"><h3>${Whose} visit frequency</h3><span>${c.weeks} weeks · ${c.visits + c.extraCU} visits</span></div>
       ${S.phase === VISIT_CHART_PHASE ? `<div class="weeks ${c.weeks + c.brkW > 30 ? "dense" : ""}" aria-label="One column per week, one dot per visit">${weeksHtml}</div>` : ""}${brkNote}
-      <table class="plan"><tbody>${freqRows}</tbody>
-        <tfoot><tr><td>Total</td><td class="num">${c.weeks} weeks</td><td class="num">${c.visits} visits</td></tr></tfoot></table>
+      <table class="plan"><tbody>${freqRows}${c.extraCU ? `<tr><td>Boost check-ups<small>For when you need them most</small></td><td class="num">As needed</td><td class="num">${c.extraCU} visit${c.extraCU > 1 ? "s" : ""}</td></tr>` : ""}</tbody>
+        <tfoot><tr><td>Total</td><td class="num">${c.weeks} weeks</td><td class="num">${c.visits + c.extraCU} visits</td></tr></tfoot></table>
     </section>`}
     ${c.cmpRows.length ? `<section class="sec">
       <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), ${c.nProg ? `${c.weeks >= YEARLY_WEEKS ? "6-month progress exam" : `${c.nProg} progress exam${c.nProg > 1 ? "s" : ""}`} and ` : ""}re-examination included · ${money(c.price)} per visit</span></div>
@@ -1256,7 +1256,7 @@ function render() {
       <div class="h3"><h3>Program fee</h3><span>${c.nProg ? `Progress examination at visit ${c.progAt.join(" & ")}` : ""}${c.nProg ? " · " : ""}Re-examination after visit ${c.visits}</span></div>
       <table class="plan"><tbody>
         <tr><td>Check-ups & needed corrections</td><td class="num">${c.visits} × ${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)}</td><td class="num">${money(c.visitFee)}</td></tr>
-        ${c.extraCU ? `<tr><td>Extra check-ups<small>Added to your care plan</small></td><td class="num">${c.extraCU} × ${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)}</td><td class="num">${money(c.extraFee)}</td></tr>` : ""}
+        ${c.extraCU ? `<tr><td>Boost check-ups<small>For when you need them most</small></td><td class="num">${c.extraCU} × ${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)}</td><td class="num">${money(c.extraFee)}</td></tr>` : ""}
         ${c.nProg ? `<tr><td>Progress examination${c.nProg > 1 ? "s" : ""}<small>Part-way check of your progress</small></td><td class="num">${c.nProg} × ${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)}</td><td class="num">${money(c.progFee)}</td></tr>` : ""}
         <tr><td>Re-examination<small>At the end of your care plan</small></td><td class="num">1 × ${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)}</td><td class="num">${money(c.reFee)}</td></tr>
       </tbody></table>

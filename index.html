@@ -91,6 +91,25 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .btns { display: flex; gap: 8px; }
 .btn { font: 700 13px var(--ui); border-radius: 999px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--rule); background: var(--field); color: var(--green); }
 .btn.go { background: var(--green); color: #fff; border-color: var(--green); }
+.btn:disabled, .btn.go:disabled { opacity: .35; cursor: not-allowed; }
+/* Required fields: outlined in red until filled; the step heading says "Required". */
+.miss { outline: 2px solid var(--move); outline-offset: 3px; border-radius: 10px; }
+.step:has(.miss) > h2::after { content: "Required"; margin-left: auto; font: 700 10px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--move); }
+.step > h2 { display: flex; align-items: center; }
+body.nophase .step.ph { display: none; }
+body.incomplete .paper { display: none; }
+.needbox { max-width: 816px; width: 100%; margin: 0 auto; background: var(--field); border: 1px solid var(--rule); border-left: 4px solid var(--move); border-radius: 10px; padding: 18px 20px; font: 500 14px var(--body); color: var(--ink); }
+.needbox b { display: block; font: 700 15px var(--ui); margin-bottom: 6px; }
+.needbox[hidden] { display: none; }
+/* Plan tabs: up to MAX_TABS plans open at once (kept in this window only). */
+.tabs { max-width: 816px; width: 100%; margin: 0 auto; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tab { display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--ui); color: var(--soft); background: var(--field); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 8px 6px 14px; cursor: pointer; max-width: 220px; }
+.tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.tab .tx { border: 0; background: none; color: inherit; font: 700 15px var(--ui); line-height: 1; padding: 0 4px; cursor: pointer; opacity: .7; }
+.tab .tx:hover { opacity: 1; }
+.tabs .newtab { font: 700 13px var(--ui); color: var(--green); background: none; border: 1px dashed var(--rule); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+@media print { .tabs, .needbox { display: none !important; } }
 
 .paper { max-width: 816px; width: 100%; margin: 0 auto; background: var(--paper); box-shadow: 0 1px 2px rgba(19,32,28,.08), 0 14px 40px -14px rgba(19,32,28,.25); border-radius: 3px; padding: clamp(22px, 6vw, 60px); display: grid; gap: 30px; align-content: start; }
 
@@ -412,7 +431,7 @@ body.pv .tier .amt.sm { font-size: 21px; }
 .pill.bonus { font-size: 10px; padding: 1px 7px; white-space: nowrap; display: table; margin: 3px 0 1px; }
 .incl-row div { overflow-wrap: anywhere; }
 .pill.bonus.inl { display: inline-block; margin: 0 0 0 6px; vertical-align: 1px; }
-#inNMwrap[hidden], #inFPwrap[hidden], #inPHwrap[hidden], #inMPwrap[hidden], #inKGwrap[hidden] { display: none; }
+#ccWrap[hidden], #ccQ[hidden], #inNMwrap[hidden], #inFPwrap[hidden], #inPHwrap[hidden], #inMPwrap[hidden], #inKGwrap[hidden] { display: none; }
 .cc.kgq { border: 1.5px solid var(--green); background: var(--mint2); }
 .cc.kgq > span { font-weight: 700; }
 .lbl { font: 600 12px var(--ui); color: var(--soft); margin-top: 4px; }
@@ -552,8 +571,8 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
 
     <section class="step"><h2><b>2</b>Patient</h2>
       <div class="two">
-        <label>Last name<input id="last" value="Sample"></label>
-        <label>First name<input id="first" value="Alex"></label>
+        <label>Last name<input id="last"></label>
+        <label>First name<input id="first"></label>
       </div>
       <div class="two">
         <label>First visit<input id="start" type="date"></label>
@@ -564,7 +583,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <div class="chips" id="phase"></div>
     </section>
 
-    <section class="step"><h2><b>4</b>Visits</h2>
+    <section class="step ph"><h2><b>4</b>Visits</h2>
       <div class="bands" id="bands"></div>
       <button type="button" class="add" id="addBand">+ Add another band</button>
       <div class="btot"><span>Total</span><b class="num" id="btot"></b></div>
@@ -584,13 +603,14 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
         <button type="button" class="add" id="addBrk">+ Add another closure</button></div>
     </section>
 
-    <section class="step"><h2><b>5</b>Fees</h2>
+    <section class="step ph"><h2><b>5</b>Fees</h2>
+      <div id="ccQ"><div class="lbl">Connect Collective pricing?</div><div class="chips" id="ccPick"></div><p class="hint">Family &amp; friends of a practice member</p></div>
       <label class="cc" id="ccWrap"><input type="checkbox" id="cc"> <span>Connect Collective pricing<small>Family & friends of a practice member</small></span></label>
       <label class="cc" id="efWrap"><input type="checkbox" id="examFree" checked> <span>Pay in full: exams at no charge<small>Progress exam and re-examination are free when they pay in full. Instalments still include them.</small></span></label>
       <div class="price"><span>Price per visit</span><b class="num" id="priceOut"></b><small id="priceWhy"></small></div>
     </section>
 
-    <section class="step"><h2><b>6</b>Included &amp; bonuses</h2>
+    <section class="step ph"><h2><b>6</b>Included &amp; bonuses</h2>
       <label class="cc kgq" id="inKGwrap"><input type="checkbox" id="inKG"> <span>Child 3 or under? Add the Connect Kids Milestone Guide<small>Tick this for children aged 3 and under</small></span></label>
       <label class="cc" id="inPHwrap"><input type="checkbox" id="inPH" checked> <span>PracticeHub app<small>Reminders, calendar sync, exercise library, mobility tests</small></span></label>
       <label class="cc" id="inMPwrap"><input type="checkbox" id="inMP" checked> <span>Connect Meal Plan<small>Healthy meals around local grocery sales</small></span></label>
@@ -598,7 +618,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
       <label class="cc" id="inFPwrap"><input type="checkbox" id="inFP" checked> <span>Member perk: family pricing<small>Their immediate family gets Connect Collective pricing while they're active</small></span></label>
     </section>
 
-    <section class="step"><h2><b>7</b>Payments</h2>
+    <section class="step ph"><h2><b>7</b>Payments</h2>
       <p class="hint">Worked out for you: one payment for every full 4 weeks of the plan (10 weeks = 2, 14 weeks = 3), all paid at least 2 weeks before the plan ends. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
       <div class="pays" id="pays"></div>
     </section>
@@ -614,10 +634,12 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
   </form>
 
   <main class="desk">
+    <nav class="tabs" id="tabs" aria-label="Open care plans"></nav>
     <div class="bar">
       <div class="file">Save as <span id="fname"></span></div>
       <div class="btns"><button type="button" class="btn" id="copy">Copy file name</button><button type="button" class="btn" id="print">Print</button><button type="button" class="btn go" id="savePdf">Save PDF</button></div>
     </div>
+    <div class="needbox" id="needBox" hidden></div>
     <article class="paper" id="p1"></article>
     <article class="paper" id="p2"></article>
   </main>
@@ -692,7 +714,7 @@ const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the 
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
 
 /* ---------- state ---------- */
-const S = { extraQ: {}, rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
+const S = { set: { audience: false, phase: false, coll: false, tf: false }, extraQ: {}, rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const money = v => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
@@ -717,12 +739,14 @@ function autoGuide() { if (S.audience !== "Kids") $("inKG").checked = false; }
 const AUTO_BONUS = { id: "inNM", phase: "Rebuild", audience: "Adult" };
 function autoBonus() { $(AUTO_BONUS.id).checked = S.phase === AUTO_BONUS.phase && S.audience === AUTO_BONUS.audience; }
 function drawForm() {
-  chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
-    it => { S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
-  chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
+  chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => S.set.audience && it.v === S.audience,
+    it => { S.set.audience = true; S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
+  chips($("phase"), PHASES.map(p => ({ label: p })), it => S.set.phase && it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.set.phase = true; S.set.tf = false; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
       const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.rec = -1; S.cur = -1; S.pick = -1; S.extraQ = {};
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
       else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
+  chips($("ccPick"), [{ label: "Yes, Connect Collective", v: true }, { label: "No, standard price", v: false }], it => S.set.coll && it.v === $("cc").checked,
+    it => { S.set.coll = true; $("cc").checked = it.v; });
   drawBands();
   drawCompare();
 }
@@ -742,8 +766,8 @@ function drawCompare() {
   $("bands").hidden = $("addBand").hidden = !!cmp;
   if (!cmp) { $("cmpBox").innerHTML = ""; return; }
   const b = S.bands[0];
-  $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips">${TIMEFRAMES.map(t =>
-      `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
+  $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips" id="tfChips">${TIMEFRAMES.map(t =>
+      `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${S.set.tf && b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
     <label>Recommended frequency<select id="recFreq"><option value="-1">No recommendation</option>${INTERVALS.map(q =>
       `<option value="${q}" ${S.rec === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
     <label>Previous frequency<select id="curFreq"><option value="-1">Not on a set frequency yet</option>${INTERVALS.map(q =>
@@ -758,7 +782,7 @@ function drawCompare() {
 }
 $("cmpBox").addEventListener("click", e => {
   const t = e.target.closest("[data-tw]"); if (!t) return;
-  S.bands[0].w = +t.dataset.tw; drawCompare(); render();
+  S.bands[0].w = +t.dataset.tw; S.set.tf = true; drawCompare(); render();
 });
 $("cmpBox").addEventListener("change", e => {
   if (e.target.id === "recFreq") { S.rec = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.rec); S.pick = -1; syncPlanFreq(); drawCompare(); render(); return; }
@@ -778,7 +802,6 @@ function drawBands() {
 $("bands").addEventListener("input", e => { const t = e.target, i = t.dataset.i; if (i !== undefined) { S.bands[+i][t.dataset.k] = parseFloat(t.value); render(); } });
 $("bands").addEventListener("click", e => { const i = e.target.dataset.rm; if (i !== undefined) { S.bands.splice(+i, 1); drawBands(); render(); } });
 $("addBand").onclick = () => { const last = S.bands[S.bands.length - 1]; S.bands.push({ q: Math.min(last.q + 1, FREQS.length - 1), w: 4 }); drawBands(); render(); };
-$("start").value = iso(new Date());
 // Office closures: any number, each a start date and a number of weeks.
 S.breaks = [{ d: `${new Date().getFullYear()}-12-21`, w: 2 }];
 // Office closures are the same for every patient, so the last ones used are remembered on this computer.
@@ -870,13 +893,13 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec, ef: +$("examFree").checked, bq: S.extraQ
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec, ef: +$("examFree").checked, bq: S.extraQ, rq: S.set
   }));
 }
 function loadPlanCode(code) {
   const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
   if (d.p === "Maintain") d.p = "Maintenance";   // codes made before the rename
-  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1, extraQ: d.bq || {} });
+  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1, extraQ: d.bq || {}, set: d.rq || { audience: true, phase: true, coll: true, tf: true } });
   $("start").value = d.s; $("cc").checked = !!d.cc; $("examFree").checked = d.ef === undefined ? true : !!d.ef; $("nProg").value = String(d.np);
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
@@ -1156,6 +1179,23 @@ function render() {
   document.body.classList.toggle("kids", S.audience === "Kids");
   const c = compute();
   const last = $("last").value.trim(), first = $("first").value.trim();
+  // Required fields start blank. Until they're filled in, the plan is hidden and can't be printed or saved.
+  const miss = [];
+  const need = (ok, el, label) => { if (!el) return; el.classList.toggle("miss", !ok); if (!ok) miss.push(label); };
+  need(S.set.audience, $("audience"), "Plan type (Adults or Kids)");
+  need(!!last, $("last"), "Last name");
+  need(!!first, $("first"), "First name");
+  need(!!$("start").value, $("start"), "First visit date");
+  need(S.set.phase, $("phase"), "Phase of care");
+  $("ccPick").classList.remove("miss");
+  if (S.set.phase && c.fullPricePhase) need(S.set.coll, $("ccPick"), "Connect Collective pricing: yes or no");
+  if (S.set.phase && COMPARE[S.phase]) need(S.set.tf, $("tfChips"), "Timeframe: 6 months or 1 year");
+  document.body.classList.toggle("nophase", !S.set.phase);
+  document.body.classList.toggle("incomplete", miss.length > 0);
+  $("needBox").hidden = !miss.length;
+  $("needBox").innerHTML = miss.length ? `<b>Fill in the required fields to see the plan</b>${miss.map(esc).join(" · ")}` : "";
+  ["copy", "print", "savePdf", "copyNote"].forEach(id => $(id).disabled = miss.length > 0);
+  drawTabs();
   const full = [last, first].filter(Boolean).join(", ") || "Patient";
   // On Connect Kids plans, headings speak about the child by name ("Alex's visits").
   const kid = S.audience === "Kids" && first;
@@ -1170,9 +1210,11 @@ function render() {
   $("progHint").textContent = c.weeks >= YEARLY_WEEKS ? `Required on 1-year plans (CCO): a progress exam around 6 months, visit ${c.progAt[0]}.` : c.nProg ? `Suggested from the visit bands. Type over it if Dr. Steve wants a different visit.` : "";
   $("cc").disabled = !c.fullPricePhase;
   $("ccWrap").classList.toggle("locked", !c.fullPricePhase);
+  $("ccWrap").hidden = c.fullPricePhase; $("ccQ").hidden = !c.fullPricePhase;   // Reconnect: staff pick Yes or No
   $("efWrap").hidden = !EXAMS_FREE_PHASES.includes(S.phase);
-  $("priceOut").textContent = money(c.price);
-  $("priceWhy").textContent = !c.fullPricePhase ? `Connect Collective pricing applies to every ${S.phase} plan` : c.collective ? "Connect Collective" : "Standard Reconnect price";
+  const priceOpen = c.fullPricePhase && !S.set.coll;   // Reconnect, before Yes / No is picked
+  $("priceOut").textContent = priceOpen ? "—" : money(c.price);
+  $("priceWhy").textContent = priceOpen ? "Choose Yes or No above" : !c.fullPricePhase ? `Connect Collective pricing applies to every ${S.phase} plan` : c.collective ? "Connect Collective" : "Standard Reconnect price";
   const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));
   if (!offer.some(([v]) => v === S.choice)) S.choice = "full";
   $("pickBox").innerHTML = c.cmpRows.length > 1 ? `<div class="lbl">Frequency chosen</div><div class="chips">${c.cmpRows.map(r =>
@@ -1356,7 +1398,49 @@ function render() {
     <div class="foot"><span>Page 2 of 2 · Investment options</span>${TAGLINE}<span>${esc(full)}</span></div>`;
 }
 
-drawForm(); render();
+/* ---------- tabs: up to MAX_TABS plans open at once. Kept in this window only; nothing is saved. ---------- */
+const MAX_TABS = 5;
+const TABS = [];
+let tabAt = 0, BLANK = "";
+const CODE_HINT = $("codeMsg").textContent;
+const tabName = (l, f) => [l.trim(), f.trim()].filter(Boolean).join(", ") || "New plan";
+function snapTab() { TABS[tabAt] = { code: planCode(), last: $("last").value, first: $("first").value }; }
+function openTab(i) {
+  tabAt = i; const t = TABS[i];
+  loadPlanCode(t.code); $("last").value = t.last; $("first").value = t.first;
+  $("planCode").value = ""; $("codeMsg").textContent = CODE_HINT;
+  render(); window.scrollTo(0, 0);
+}
+function drawTabs() {
+  if (!TABS.length) return;
+  $("tabs").innerHTML = TABS.map((t, i) => {
+    const name = i === tabAt ? tabName($("last").value, $("first").value) : tabName(t.last, t.first);
+    return `<div class="tab" role="tab" aria-selected="${i === tabAt}" data-tab="${i}"><span>${esc(name)}</span><button type="button" class="tx" data-close="${i}" aria-label="Close ${esc(name)}">×</button></div>`;
+  }).join("") + (TABS.length < MAX_TABS ? `<button type="button" class="newtab" id="newTab">+ New plan</button>` : `<span class="hint">${MAX_TABS} plans open, the most at once</span>`);
+}
+function closeTab(i) {
+  const live = i === tabAt, t = live ? { code: planCode(), last: $("last").value, first: $("first").value } : TABS[i];
+  if (t.code !== BLANK || t.last.trim() || t.first.trim()) {
+    if (!confirm(`Close ${tabName(t.last, t.first)}? Save the PDF and copy the file note first if you need them.`)) return;
+  }
+  if (TABS.length === 1) { TABS[0] = { code: BLANK, last: "", first: "" }; openTab(0); return; }
+  if (!live) snapTab();
+  TABS.splice(i, 1);
+  if (live) openTab(Math.min(i, TABS.length - 1));
+  else { if (i < tabAt) tabAt--; drawTabs(); }
+}
+$("tabs").addEventListener("click", e => {
+  const x = e.target.closest("[data-close]");
+  if (x) { closeTab(+x.dataset.close); return; }
+  if (e.target.closest("#newTab")) { snapTab(); TABS.push({ code: BLANK, last: "", first: "" }); openTab(TABS.length - 1); return; }
+  const t = e.target.closest("[data-tab]");
+  if (t && +t.dataset.tab !== tabAt) { snapTab(); openTab(+t.dataset.tab); }
+});
+
+drawForm();
+BLANK = planCode();
+TABS.push({ code: BLANK, last: "", first: "" });
+render();
 // ---- Staff PIN. Only a fingerprint (SHA-256) of the PIN is kept here, never the PIN itself.
 // To change the PIN, replace PIN_HASH with the SHA-256 of "connect-careplans:" + the new PIN.
 // Staff PIN screen on/off. Set to true to turn it back on (the PIN itself is unchanged).

@@ -1125,9 +1125,11 @@ function cmpTable(c) {
   const perDay = d => d >= 1 ? `$${Math.round(d)}` : money(d);
   const call = lower ? `<div class="callout"><b>${rec.visits - lower.visits} more check-up${rec.visits - lower.visits === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
   const inst = c.nPay > 1;
+  // Spell out what the total covers, so visits × price adds up on paper.
+  const exams = c.nProg ? `${c.nProg} progress exam${c.nProg > 1 ? "s" : ""} + re-examination` : "re-examination";
   return `<table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th><th>${inst ? "Monthly payment" : "Total"}</th><th></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}${inst ? `<em>Total ${money(r.fee)} · ${c.nPay} payments</em>` : ""}${r.recommended ? call : ""}</td><td>${r.visits}</td><td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>Total ${money(r.fee)} = ${r.visits} visits + ${exams}${inst ? ` · ${c.nPay} payments` : ""}</em>${r.recommended ? call : ""}</td><td>${r.visits}</td><td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
       ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }

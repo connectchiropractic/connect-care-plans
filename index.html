@@ -739,11 +739,11 @@ function drawCompare() {
       `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
     <label>Recommended frequency<select id="recFreq"><option value="-1">No recommendation</option>${INTERVALS.map(q =>
       `<option value="${q}" ${S.rec === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
-    <label>Current frequency<select id="curFreq"><option value="-1">Not on a set frequency yet</option>${INTERVALS.map(q =>
+    <label>Previous frequency<select id="curFreq"><option value="-1">Not on a set frequency yet</option>${INTERVALS.map(q =>
       `<option value="${q}" ${S.cur === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
     <div class="lbl">Also show on the plan</div>${INTERVALS.filter(q => q !== S.cur && q !== S.rec).map(q =>
       `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}
-    <p class="hint">The recommended and current frequencies are always shown. Every other option is compared with the recommended one (or the current one if there's no recommendation).</p>`;
+    <p class="hint">The recommended and previous frequencies are always shown. The green box under the recommendation compares it with the previous frequency (or the next less frequent option).</p>`;
 }
 $("cmpBox").addEventListener("click", e => {
   const t = e.target.closest("[data-tw]"); if (!t) return;
@@ -1084,7 +1084,7 @@ function fileNote(c, name, kid) {
   L.push(`Prepared ${d(new Date())}`);
   L.push(`Phase: ${S.phase}`);
   L.push(`Visit frequency: ${freq}`);
-  if (COMPARE[S.phase] && S.rec >= 0) L.push(`Recommended by Dr. Steve: ${FREQS[S.rec][1]}${S.cur >= 0 ? ` · Current: ${FREQS[S.cur][1]}` : ""}`);
+  if (COMPARE[S.phase] && S.rec >= 0) L.push(`Recommended by Dr. Steve: ${FREQS[S.rec][1]}${S.cur >= 0 ? ` · Previous: ${FREQS[S.cur][1]}` : ""}`);
   L.push(`Time frame: ${d(c.start)} – ${d(c.end)} (${c.weeks} weeks${c.brkW ? `, plus ${c.brkW} week${c.brkW > 1 ? "s" : ""} office closure: ${c.breaks.map(b => `${d(b.date)} for ${b.w} wk${b.w > 1 ? "s" : ""}`).join("; ")}` : ""})`);
   const perks = INCLUDED.filter(x => x.tag && $(x.id).checked && (!x.phases || x.phases.includes(S.phase)));
   if (perks.length) L.push(`Member perk: ${perks.map(x => x.desc.replace("you're", "they're").replace("your immediate family", "their immediate family")).join(" ")}`);
@@ -1126,7 +1126,7 @@ function cmpTable(c) {
   const inst = c.nPay > 1;
   return `<table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th><th>${inst ? "Monthly payment" : "Total"}</th><th></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Current frequency</small>` : ""}${inst ? `<em>Total ${money(r.fee)} · ${c.nPay} payments</em>` : ""}${r.recommended ? call : ""}</td><td>${r.visits}</td><td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}${inst ? `<em>Total ${money(r.fee)} · ${c.nPay} payments</em>` : ""}${r.recommended ? call : ""}</td><td>${r.visits}</td><td>${money(inst ? r.pay : r.fee)}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
       ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }

@@ -267,7 +267,10 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp td.pif { color: var(--green); font-weight: 700; }
 .callout { margin-top: 7px; padding: 6px 10px; border-radius: 8px; background: var(--mint2); border: 1px solid var(--mint); font-size: 12.5px; font-weight: 500; color: var(--soft); white-space: normal; }
 .callout b { color: var(--green); }
-.cmp-note.bcu-note b { color: var(--green); }
+.cmp td em b.bonusline { display: block; color: var(--green); font-weight: 700; }
+.bq { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; }
+.bq select { width: auto; }
+.bcu[hidden] { display: none; }
 .cmp-note { margin: 4px 0 0; font-size: 11.5px; color: var(--soft); }
 .cmp td.save { color: var(--green); font-weight: 800; }
 .cmp th small s { color: var(--faint); }
@@ -695,7 +698,7 @@ const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the 
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
 
 /* ---------- state ---------- */
-const S = { rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
+const S = { bonusQ: {}, rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const money = v => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
@@ -723,7 +726,7 @@ function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
     it => { S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
   chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
-      const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.rec = -1; S.cur = -1; S.pick = -1;
+      const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.rec = -1; S.cur = -1; S.pick = -1; S.bonusQ = {};
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
       else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
   drawBands();
@@ -753,7 +756,11 @@ function drawCompare() {
       `<option value="${q}" ${S.cur === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
     <div class="lbl">Also show on the plan</div>${INTERVALS.filter(q => q !== S.cur && q !== S.rec).map(q =>
       `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}
-    <p class="hint">The recommended and previous frequencies are always shown. The green box under the recommendation compares it with the previous frequency (or the next less frequent option).</p>`;
+    <p class="hint">The recommended and previous frequencies are always shown. The green box under the recommendation compares it with the previous frequency (or the next less frequent option).</p>
+    ${considered().length ? `<div class="lbl">Bonus check-ups (optional)</div>${considered().map(q =>
+      `<label class="bq"><span>${FREQS[q][1]}</span><select data-bq="${q}">${[0, ...Array.from({ length: BONUS_CHECKUPS_MAX }, (_, i) => i + 1)].map(n =>
+        `<option value="${n}" ${(S.bonusQ[q] || 0) === n ? "selected" : ""}>${n ? `+ ${n} bonus` : "None"}</option>`).join("")}</select></label>`).join("")}
+    <p class="hint">Extra check-ups at no charge, added to that option only. The price stays the same.</p>` : ""}`;
 }
 $("cmpBox").addEventListener("click", e => {
   const t = e.target.closest("[data-tw]"); if (!t) return;
@@ -762,8 +769,9 @@ $("cmpBox").addEventListener("click", e => {
 $("cmpBox").addEventListener("change", e => {
   if (e.target.id === "recFreq") { S.rec = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.rec); S.pick = -1; syncPlanFreq(); drawCompare(); render(); return; }
   if (e.target.id === "curFreq") { S.cur = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.cur); syncPlanFreq(); drawCompare(); render(); return; }
+  if (e.target.dataset.bq !== undefined) { const n = +e.target.value, bq = +e.target.dataset.bq; if (n) S.bonusQ[bq] = n; else delete S.bonusQ[bq]; render(); return; }
   const q = +e.target.dataset.cq; if (isNaN(q)) return;
-  S.cmp = e.target.checked ? [...S.cmp, q] : S.cmp.filter(x => x !== q); syncPlanFreq(); render();
+  S.cmp = e.target.checked ? [...S.cmp, q] : S.cmp.filter(x => x !== q); syncPlanFreq(); drawCompare(); render();
 });
 function drawBands() {
   $("bands").innerHTML = S.bands.map((b, i) => `<div class="band">
@@ -869,13 +877,13 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec, ef: +$("examFree").checked, bc: +$("bonusCU").value
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec, ef: +$("examFree").checked, bc: +$("bonusCU").value, bq: S.bonusQ
   }));
 }
 function loadPlanCode(code) {
   const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
   if (d.p === "Maintain") d.p = "Maintenance";   // codes made before the rename
-  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1 });
+  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1, bonusQ: d.bq || {} });
   $("start").value = d.s; $("cc").checked = !!d.cc; $("examFree").checked = d.ef === undefined ? true : !!d.ef; $("bonusCU").value = String(d.bc || 0); $("nProg").value = String(d.np);
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
@@ -1071,9 +1079,10 @@ function compute() {
   const cmpSet = COMPARE[S.phase] ? (considered().length ? considered() : [S.bands[0].q]) : [];
   const cmpRows = cmpSet.length ? cmpSet.map(q => {
     const v = Math.ceil(weeks * FREQS[q][0] - 1e-9), fee = r2((v + nProg + 1) * price);
-    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), pif: r2(fee - (examFree ? (nProg + 1) * price : 0)), perWeek: r2(fee / weeks), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur, recommended: q === S.rec };
+    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), pif: r2(fee - (examFree ? (nProg + 1) * price : 0)), perWeek: r2(fee / weeks), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur, recommended: q === S.rec, bonus: S.bonusQ[q] || 0 };
   }) : [];
-  const bonusCU = parseInt($("bonusCU").value) || 0;
+  // Bonus check-ups: per frequency on Optimize / Maintenance, else one choice for the plan.
+  const bonusCU = COMPARE[S.phase] ? (S.bonusQ[S.bands[0].q] || 0) : parseInt($("bonusCU").value) || 0;
   return { bonusCU, examFree, examSave, cmpRows, nPay, planOnly, stdTotal, collSave, brkW, breaks, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
 }
 
@@ -1138,15 +1147,15 @@ function cmpTable(c) {
   const lower = rec && (rows.find(r => r.current && r.visits < rec.visits) || rows.filter(r => r.visits < rec.visits)[0]);
   const plain = r => r.label.replace(/\s*\(.*\)/, "").replace(/^\w/, ch => ch.toLowerCase());
   const perDay = d => d >= 1 ? `$${Math.round(d)}` : money(d);
-  const call = lower ? `<div class="callout"><b>${rec.visits - lower.visits} more check-up${rec.visits - lower.visits === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
+  const more = lower ? rec.visits + rec.bonus - lower.visits - lower.bonus : 0;   // bonus check-ups count too
+  const call = more > 0 ? `<div class="callout"><b>${more} more check-up${more === 1 ? "" : "s"}</b> than ${plain(lower)}, for about ${perDay((rec.perWeek - lower.perWeek) / 7)} a day</div>` : "";
   const inst = c.nPay > 1, pifCol = c.examFree && inst;   // pay in full skips the exams, so it gets its own price
   // Spell out what the total covers, so visits × price adds up on paper.
   const exams = c.nProg ? `${c.nProg > 1 ? c.nProg + " progress exams" : "progress exam"} + re-examination` : "re-examination";
   return `<table class="cmp num">
         <thead><tr><th>How often</th><th>Visits</th>${pifCol ? "<th>Pay in full</th>" : ""}<th>${inst ? "Monthly instalments" : "Total"}</th><th></th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>${r.visits} visits + ${exams}, ${money(c.price)} each</em>${r.recommended ? call : ""}</td><td>${r.visits}</td>${pifCol ? `<td class="pif">${money(r.pif)}<em>save ${money(r2(r.fee - r.pif))}</em></td>` : ""}<td>${money(inst ? r.pay : r.fee)}${inst ? `<em>× ${c.nPay} = ${money(r.fee)}</em>` : ""}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>${r.visits} visits + ${exams}, ${money(c.price)} each${r.bonus ? `<b class="bonusline">Plus ${r.bonus} bonus check-up${r.bonus > 1 ? "s" : ""} at no charge</b>` : ""}</em>${r.recommended ? call : ""}</td><td>${r.visits}${r.bonus ? `<em>+ ${r.bonus} bonus</em>` : ""}</td>${pifCol ? `<td class="pif">${money(r.pif)}<em>save ${money(r2(r.fee - r.pif))}</em></td>` : ""}<td>${money(inst ? r.pay : r.fee)}${inst ? `<em>× ${c.nPay} = ${money(r.fee)}</em>` : ""}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
-      ${c.bonusCU ? `<p class="cmp-note bcu-note"><b>Plus ${c.bonusCU} bonus check-up${c.bonusCU > 1 ? "s" : ""} at no charge</b>, whichever frequency you choose.</p>` : ""}
       ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }
 
@@ -1169,6 +1178,7 @@ function render() {
   $("cc").disabled = !c.fullPricePhase;
   $("ccWrap").classList.toggle("locked", !c.fullPricePhase);
   $("efWrap").hidden = !EXAMS_FREE_PHASES.includes(S.phase);
+  $("bonusCU").closest("label").hidden = !!COMPARE[S.phase];   // Optimize / Maintenance set bonuses per frequency in step 4
   $("priceOut").textContent = money(c.price);
   $("priceWhy").textContent = !c.fullPricePhase ? `Connect Collective pricing applies to every ${S.phase} plan` : c.collective ? "Connect Collective" : "Standard Reconnect price";
   const offer = CHOICES.filter(([v]) => v !== "ppv" || c.planOnly).filter(([v]) => c.n > 1 || (v !== "bank" && v !== "card"));

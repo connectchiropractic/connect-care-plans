@@ -254,14 +254,15 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .who .tf small { display: block; font: 600 12px var(--body); color: var(--faint); margin-top: 2px; }
 .cmp { width: 100%; border-collapse: collapse; font-size: 13px; }
 .cmp th { font: 600 11.5px var(--body); color: var(--soft); text-align: right; padding: 0 0 6px 12px; border-bottom: 1px solid var(--rule); }
-.cmp th:first-child, .cmp td:first-child { text-align: left; padding-left: 0; }
+.cmp th:first-child, .cmp td:first-child { text-align: left; padding-left: 12px; }
+.cmp th:last-child, .cmp td:last-child { padding-right: 12px; }
 .cmp td { text-align: right; padding: 9px 0 9px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap; vertical-align: middle; }
 .cmp td:first-child { white-space: normal; font-weight: 700; color: var(--ink); }
 .cmp tr.cur td { background: var(--mint2); }
 .cmp tr.rec td { border-top: 2px solid var(--green); border-bottom: 2px solid var(--green); }
-.cmp tr.rec td:first-child { border-left: 2px solid var(--green); padding-left: 10px; }
+.cmp tr.rec td:first-child { border-left: 2px solid var(--green); padding-left: 10px; }   /* 10 + 2px border = 12, lines up with the other rows */
 .cmp tr.rec td:last-child { border-right: 2px solid var(--green); padding-right: 10px; }
-.recbadge { display: table; font: 700 10px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 3px 10px; line-height: 1.3; margin-bottom: 6px; }
+.recbadge { display: block; width: max-content; font: 700 10px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 3px 10px; line-height: 1.3; margin-bottom: 6px; }
 .cmp td em { display: block; font-style: normal; font-weight: 500; font-size: 11px; color: var(--faint); margin-top: 2px; }
 .callout { margin-top: 7px; padding: 6px 10px; border-radius: 8px; background: var(--mint2); border: 1px solid var(--mint); font-size: 12.5px; font-weight: 500; color: var(--soft); white-space: normal; }
 .callout b { color: var(--green); }

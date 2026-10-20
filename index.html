@@ -714,8 +714,10 @@ const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the 
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
 
 /* ---------- state ---------- */
-const S = { set: { audience: false, phase: false, coll: false, tf: false }, extraQ: {}, rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
+const S = { set: { audience: false, phase: false, coll: false, tf: false, rec: false, cur: false }, extraQ: {}, rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
 const $ = id => document.getElementById(id);
+// Visit bands start blank: fs / ws say whether the CA has picked the frequency / weeks yet.
+S.bands.forEach(b => { b.fs = false; b.ws = false; });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const money = v => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
 const r2 = v => Math.round(v * 100) / 100;
@@ -741,10 +743,10 @@ function autoBonus() { $(AUTO_BONUS.id).checked = S.phase === AUTO_BONUS.phase &
 function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => S.set.audience && it.v === S.audience,
     it => { S.set.audience = true; S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
-  chips($("phase"), PHASES.map(p => ({ label: p })), it => S.set.phase && it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.set.phase = true; S.set.tf = false; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
+  chips($("phase"), PHASES.map(p => ({ label: p })), it => S.set.phase && it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.set.phase = true; S.set.tf = false; S.set.rec = false; S.set.cur = false; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
       const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.rec = -1; S.cur = -1; S.pick = -1; S.extraQ = {};
-      if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
-      else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
+      if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w, fs: true, ws: true }];
+      else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w, fs: false, ws: false })); });
   chips($("ccPick"), [{ label: "Yes, Connect Collective", v: true }, { label: "No, standard price", v: false }], it => S.set.coll && it.v === $("cc").checked,
     it => { S.set.coll = true; $("cc").checked = it.v; });
   drawBands();
@@ -768,10 +770,10 @@ function drawCompare() {
   const b = S.bands[0];
   $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips" id="tfChips">${TIMEFRAMES.map(t =>
       `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${S.set.tf && b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
-    <label>Recommended frequency<select id="recFreq"><option value="-1">No recommendation</option>${INTERVALS.map(q =>
-      `<option value="${q}" ${S.rec === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
-    <label>Previous frequency<select id="curFreq"><option value="-1">Not on a set frequency yet</option>${INTERVALS.map(q =>
-      `<option value="${q}" ${S.cur === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
+    <label>Recommended frequency<select id="recFreq"><option value="" disabled ${S.set.rec ? "" : "selected"}>Choose…</option><option value="-1" ${S.set.rec && S.rec === -1 ? "selected" : ""}>No recommendation</option>${INTERVALS.map(q =>
+      `<option value="${q}" ${S.set.rec && S.rec === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
+    <label>Previous frequency<select id="curFreq"><option value="" disabled ${S.set.cur ? "" : "selected"}>Choose…</option><option value="-1" ${S.set.cur && S.cur === -1 ? "selected" : ""}>Not on a set frequency yet</option>${INTERVALS.map(q =>
+      `<option value="${q}" ${S.set.cur && S.cur === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
     <div class="lbl">Also show on the plan</div>${INTERVALS.filter(q => q !== S.cur && q !== S.rec).map(q =>
       `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}
     <p class="hint">The recommended and previous frequencies are always shown. The green box under the recommendation compares it with the previous frequency (or the next less frequent option).</p>
@@ -785,23 +787,23 @@ $("cmpBox").addEventListener("click", e => {
   S.bands[0].w = +t.dataset.tw; S.set.tf = true; drawCompare(); render();
 });
 $("cmpBox").addEventListener("change", e => {
-  if (e.target.id === "recFreq") { S.rec = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.rec); S.pick = -1; syncPlanFreq(); drawCompare(); render(); return; }
-  if (e.target.id === "curFreq") { S.cur = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.cur); syncPlanFreq(); drawCompare(); render(); return; }
+  if (e.target.id === "recFreq") { S.set.rec = true; S.rec = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.rec); S.pick = -1; syncPlanFreq(); drawCompare(); render(); return; }
+  if (e.target.id === "curFreq") { S.set.cur = true; S.cur = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.cur); syncPlanFreq(); drawCompare(); render(); return; }
   if (e.target.dataset.xq !== undefined) { const n = +e.target.value, bq = +e.target.dataset.xq; if (n) S.extraQ[bq] = n; else delete S.extraQ[bq]; render(); return; }
   const q = +e.target.dataset.cq; if (isNaN(q)) return;
   S.cmp = e.target.checked ? [...S.cmp, q] : S.cmp.filter(x => x !== q); syncPlanFreq(); drawCompare(); render();
 });
 function drawBands() {
   $("bands").innerHTML = S.bands.map((b, i) => `<div class="band">
-      <select id="bf${i}" data-i="${i}" data-k="q" aria-label="Band ${i + 1} frequency">${FREQS.map(([, t], qi) => `<option value="${qi}" ${qi === b.q ? "selected" : ""}>${t}</option>`).join("")}</select>
+      <select id="bf${i}" data-i="${i}" data-k="q" aria-label="Band ${i + 1} frequency" class="${b.fs ? "" : "miss"}"><option value="" disabled ${b.fs ? "" : "selected"}>Choose frequency</option>${FREQS.map(([, t], qi) => `<option value="${qi}" ${b.fs && qi === b.q ? "selected" : ""}>${t}</option>`).join("")}</select>
       <span class="for">for</span>
-      <select id="bw${i}" data-i="${i}" data-k="w" aria-label="Band ${i + 1} weeks">${WEEK_CHOICES.map(w => `<option value="${w}" ${w === b.w ? "selected" : ""}>${w} wk${w > 1 ? "s" : ""}</option>`).join("")}</select>
+      <select id="bw${i}" data-i="${i}" data-k="w" aria-label="Band ${i + 1} weeks" class="${b.ws ? "" : "miss"}"><option value="" disabled ${b.ws ? "" : "selected"}>Weeks</option>${WEEK_CHOICES.map(w => `<option value="${w}" ${b.ws && w === b.w ? "selected" : ""}>${w} wk${w > 1 ? "s" : ""}</option>`).join("")}</select>
       <span class="bv num" id="bv${i}"></span>
       <button type="button" class="x" data-rm="${i}" aria-label="Remove band ${i + 1}" ${S.bands.length < 2 ? "disabled" : ""}>×</button></div>`).join("");
 }
-$("bands").addEventListener("input", e => { const t = e.target, i = t.dataset.i; if (i !== undefined) { S.bands[+i][t.dataset.k] = parseFloat(t.value); render(); } });
+$("bands").addEventListener("input", e => { const t = e.target, i = t.dataset.i; if (i !== undefined) { const b = S.bands[+i]; b[t.dataset.k] = parseFloat(t.value); b[t.dataset.k === "q" ? "fs" : "ws"] = true; t.classList.remove("miss"); render(); } });
 $("bands").addEventListener("click", e => { const i = e.target.dataset.rm; if (i !== undefined) { S.bands.splice(+i, 1); drawBands(); render(); } });
-$("addBand").onclick = () => { const last = S.bands[S.bands.length - 1]; S.bands.push({ q: Math.min(last.q + 1, FREQS.length - 1), w: 4 }); drawBands(); render(); };
+$("addBand").onclick = () => { const last = S.bands[S.bands.length - 1]; S.bands.push({ q: Math.min(last.q + 1, FREQS.length - 1), w: 4, fs: false, ws: false }); drawBands(); render(); };
 // Office closures: any number, each a start date and a number of weeks.
 S.breaks = [{ d: `${new Date().getFullYear()}-12-21`, w: 2 }];
 // Office closures are the same for every patient, so the last ones used are remembered on this computer.
@@ -890,7 +892,7 @@ const b64u = t => btoa(unescape(encodeURIComponent(t))).replace(/\+/g, "-").repl
 const unb64u = t => decodeURIComponent(escape(atob(t.replace(/-/g, "+").replace(/_/g, "/"))));
 function planCode() {
   return "CP1-" + b64u(JSON.stringify({
-    a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
+    a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w, +!!x.fs, +!!x.ws]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
     in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec, ef: +$("examFree").checked, bq: S.extraQ, rq: S.set
@@ -899,7 +901,7 @@ function planCode() {
 function loadPlanCode(code) {
   const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
   if (d.p === "Maintain") d.p = "Maintenance";   // codes made before the rename
-  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1, extraQ: d.bq || {}, set: d.rq || { audience: true, phase: true, coll: true, tf: true } });
+  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w, fs = 1, ws = 1]) => ({ q, w, fs: !!fs, ws: !!ws })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1, extraQ: d.bq || {}, set: Object.assign({ audience: true, phase: true, coll: true, tf: true, rec: true, cur: true }, d.rq) });
   $("start").value = d.s; $("cc").checked = !!d.cc; $("examFree").checked = d.ef === undefined ? true : !!d.ef; $("nProg").value = String(d.np);
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
@@ -1188,7 +1190,11 @@ function render() {
   need(S.set.phase, $("phase"), "Phase of care");
   $("ccPick").classList.remove("miss");
   if (S.set.phase && c.fullPricePhase) need(S.set.coll, $("ccPick"), "Connect Collective pricing: yes or no");
-  if (S.set.phase && COMPARE[S.phase]) need(S.set.tf, $("tfChips"), "Timeframe: 6 months or 1 year");
+  if (S.set.phase && COMPARE[S.phase]) {
+    need(S.set.tf, $("tfChips"), "Timeframe: 6 months or 1 year");
+    need(S.set.rec, $("recFreq"), "Recommended frequency");
+    need(S.set.cur, $("curFreq"), "Previous frequency");
+  } else if (S.set.phase && !S.bands.every(b => b.fs && b.ws)) miss.push("Visit frequency and weeks for each band");
   document.body.classList.toggle("nophase", !S.set.phase);
   document.body.classList.toggle("incomplete", miss.length > 0);
   $("needBox").hidden = !miss.length;
@@ -1204,8 +1210,9 @@ function render() {
   $("fname").textContent = `${full} - ${TM[S.phase] || S.phase} ${c.visits + c.extraCU}v [${c.price}] ${mon}`;
 
   // form readouts
-  c.rows.forEach((r, i) => { const el = $("bv" + i); if (el) el.textContent = `= ${r.v}`; });
-  $("btot").textContent = `${c.weeks} weeks · ${c.visits} visits`;
+  const bandsSet = S.bands.every(b => b.fs && b.ws);
+  c.rows.forEach((r, i) => { const el = $("bv" + i), b = S.bands[i]; if (el) el.textContent = b && b.fs && b.ws ? `= ${r.v}` : ""; });
+  $("btot").textContent = bandsSet ? `${c.weeks} weeks · ${c.visits} visits` : "—";
   $("progHint").textContent = c.weeks >= YEARLY_WEEKS ? `Required on 1-year plans (CCO): a progress exam around 6 months, visit ${c.progAt[0]}.` : c.nProg ? `Suggested from the visit bands. Type over it if Dr. Steve wants a different visit.` : "";
   $("cc").disabled = !c.fullPricePhase;
   $("ccWrap").classList.toggle("locked", !c.fullPricePhase);

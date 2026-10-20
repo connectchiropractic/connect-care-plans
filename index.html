@@ -258,6 +258,14 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .cmp td { text-align: right; padding: 9px 0 9px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap; vertical-align: middle; }
 .cmp td:first-child { white-space: normal; font-weight: 700; color: var(--ink); }
 .cmp tr.cur td { background: var(--mint2); }
+.cmp tr.rec td { border-top: 2px solid var(--green); border-bottom: 2px solid var(--green); }
+.cmp tr.rec td:first-child { border-left: 2px solid var(--green); padding-left: 10px; }
+.cmp tr.rec td:last-child { border-right: 2px solid var(--green); padding-right: 10px; }
+.recbadge { display: table; font: 700 10px var(--body); background: var(--green); color: #fff; border-radius: 999px; padding: 2px 9px; line-height: 1.4; margin-bottom: 5px; }
+.cmp td em { display: block; font-style: normal; font-weight: 500; font-size: 11px; color: var(--faint); margin-top: 2px; }
+.cmp td.vs, .cmp th.vs { text-align: left; white-space: normal; font-size: 12px; color: var(--soft); width: 38%; }
+.cmp td.vs b { color: var(--ink); }
+.cmp-note { margin: 4px 0 0; font-size: 11.5px; color: var(--soft); }
 .cmp td.save { color: var(--green); font-weight: 800; }
 .cmp th small s { color: var(--faint); }
 .cmp td small { display: block; font-weight: 600; font-size: 11px; color: var(--green); }
@@ -657,6 +665,8 @@ const INCLUDED = [
 // Optimize and Maintenance run for a set timeframe; every frequency is counted over it.
 const TIMEFRAMES = [{ label: "6 months", w: 26 }, { label: "1 year", w: 52 }];
 const COMPARE = { Optimize: { on: [4, 5] }, Maintenance: { on: [6, 7] } };
+// Wording for the "Compared to recommended" column on Optimize / Maintenance plans.
+const CMP_WORDS = { badge: "Recommended by Dr. Steve", up: "faster progress", down: "longer to hold the change" };
 const YEARLY_WEEKS = 52;   // plans this long must include a progress exam around 6 months (CCO)
 const PROMISE_PHASE = "Reconnect";   // the Connect Care Promise is only offered on Reconnect plans
 const PROGRESS_EXAM_PHASES = ["Reconnect"];   // progress exams are on by default here; later phases start at None
@@ -673,7 +683,7 @@ const TM = { Reconnect: "Reconnect™" };   // how each phase is written in the 
 const GC_LOGO = `<img src="gocardless-logo.png" alt="GoCardless" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'GoCardless'}))">`;
 
 /* ---------- state ---------- */
-const S = { cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
+const S = { rec: -1, cur: -1, pick: -1, choice: "full", cmp: [], audience: "Adult", phase: "Reconnect", bands: START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })), progSig: "", progManual: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const money = v => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
@@ -701,7 +711,7 @@ function drawForm() {
   chips($("audience"), [{ label: "Connect Adults", v: "Adult" }, { label: "Connect Kids", v: "Kids" }], it => it.v === S.audience,
     it => { S.audience = it.v; autoGuide(); autoBonus(); document.body.classList.toggle("kids", it.v === "Kids"); });
   chips($("phase"), PHASES.map(p => ({ label: p })), it => it.label === S.phase, it => { const wasCmp = !!COMPARE[S.phase]; S.phase = it.label; autoBonus(); applyClosureDefault(); $("nProg").value = PROGRESS_EXAM_PHASES.includes(S.phase) ? "1" : "0";
-      const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.cur = -1; S.pick = -1;
+      const cmp = COMPARE[S.phase]; S.cmp = cmp ? [...cmp.on] : []; S.rec = -1; S.cur = -1; S.pick = -1;
       if (cmp) S.bands = [{ q: cmp.on[0], w: TIMEFRAMES[0].w }];
       else if (wasCmp) S.bands = START_BANDS.map(([f, w]) => ({ q: FREQS.findIndex(x => x[0] === f), w })); });
   drawBands();
@@ -711,11 +721,11 @@ function drawForm() {
 // The plan's frequency (for fees, dates and the file note) is the one they choose, else the current one,
 // else the first one they're considering.
 const INTERVALS = FREQS.map((f, q) => q).filter(q => FREQS[q][1].startsWith("Every "));
-function considered() { return [...new Set([...S.cmp, ...(S.cur >= 0 ? [S.cur] : [])])].sort((x, y) => x - y); }
+function considered() { return [...new Set([...S.cmp, ...[S.rec, S.cur].filter(x => x >= 0)])].sort((x, y) => x - y); }
 function syncPlanFreq() {
   const set = considered();
   if (!set.includes(S.pick)) S.pick = -1;
-  const q = S.pick >= 0 ? S.pick : S.cur >= 0 ? S.cur : set[0];
+  const q = S.pick >= 0 ? S.pick : S.rec >= 0 ? S.rec : S.cur >= 0 ? S.cur : set[0];
   if (q !== undefined) S.bands[0].q = q;
 }
 function drawCompare() {
@@ -725,17 +735,20 @@ function drawCompare() {
   const b = S.bands[0];
   $("cmpBox").innerHTML = `<div class="lbl">Timeframe</div><div class="chips">${TIMEFRAMES.map(t =>
       `<button type="button" class="chip" data-tw="${t.w}" aria-pressed="${b.w === t.w}">${t.label}<small>${t.w} weeks</small></button>`).join("")}</div>
+    <label>Recommended frequency<select id="recFreq"><option value="-1">No recommendation</option>${INTERVALS.map(q =>
+      `<option value="${q}" ${S.rec === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
     <label>Current frequency<select id="curFreq"><option value="-1">Not on a set frequency yet</option>${INTERVALS.map(q =>
       `<option value="${q}" ${S.cur === q ? "selected" : ""}>${FREQS[q][1]}</option>`).join("")}</select></label>
-    <div class="lbl">Frequencies they're considering</div>${INTERVALS.filter(q => q !== S.cur).map(q =>
+    <div class="lbl">Also show on the plan</div>${INTERVALS.filter(q => q !== S.cur && q !== S.rec).map(q =>
       `<label class="cc"><input type="checkbox" data-cq="${q}" ${S.cmp.includes(q) ? "checked" : ""}> <span>${FREQS[q][1]}</span></label>`).join("")}
-    <p class="hint">Their current frequency is always shown and highlighted on the plan. Record what they choose in the last step.</p>`;
+    <p class="hint">The recommended and current frequencies are always shown. Every other option is compared with the recommended one (or the current one if there's no recommendation).</p>`;
 }
 $("cmpBox").addEventListener("click", e => {
   const t = e.target.closest("[data-tw]"); if (!t) return;
   S.bands[0].w = +t.dataset.tw; drawCompare(); render();
 });
 $("cmpBox").addEventListener("change", e => {
+  if (e.target.id === "recFreq") { S.rec = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.rec); S.pick = -1; syncPlanFreq(); drawCompare(); render(); return; }
   if (e.target.id === "curFreq") { S.cur = +e.target.value; S.cmp = S.cmp.filter(x => x !== S.cur); syncPlanFreq(); drawCompare(); render(); return; }
   const q = +e.target.dataset.cq; if (isNaN(q)) return;
   S.cmp = e.target.checked ? [...S.cmp, q] : S.cmp.filter(x => x !== q); syncPlanFreq(); render();
@@ -843,13 +856,13 @@ function planCode() {
     a: S.audience, p: S.phase, b: S.bands.map(x => [x.q, x.w]), s: $("start").value, cc: +$("cc").checked,
     np: +$("nProg").value, pa: S.progManual ? [$("pa0").value, $("pa1").value].map(Number) : 0,
     bk: [+$("brk").checked, S.breaks.map(b => [b.d, b.w])],
-    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick
+    in: INCLUDED.map(x => +$(x.id).checked), cm: S.cmp, ch: S.choice, cu: S.cur, pk: S.pick, rc: S.rec
   }));
 }
 function loadPlanCode(code) {
   const d = JSON.parse(unb64u(code.trim().replace(/^CP1-/, "")));
   if (d.p === "Maintain") d.p = "Maintenance";   // codes made before the rename
-  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1 });
+  Object.assign(S, { audience: d.a, phase: d.p, bands: d.b.map(([q, w]) => ({ q, w })), cmp: d.cm || [], choice: d.ch || "full", cur: d.cu ?? -1, pick: d.pk ?? -1, rec: d.rc ?? -1 });
   $("start").value = d.s; $("cc").checked = !!d.cc; $("nProg").value = String(d.np);
   $("brk").checked = !!d.bk[0];
   S.breaks = Array.isArray(d.bk[1]) ? d.bk[1].map(([bd, w]) => ({ d: bd, w })) : [{ d: d.bk[1], w: d.bk[2] }];
@@ -1042,7 +1055,7 @@ function compute() {
   const cmpSet = COMPARE[S.phase] ? (considered().length ? considered() : [S.bands[0].q]) : [];
   const cmpRows = cmpSet.length ? cmpSet.map(q => {
     const v = Math.ceil(weeks * FREQS[q][0] - 1e-9), fee = r2((v + nProg + 1) * price);
-    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur };
+    return { q, label: FREQS[q][1], visits: v, fee, pay: r2(fee / nPay), perWeek: r2(fee / weeks), ppv: r2((v + nProg + 1) * PRICE_FULL), current: q === S.cur, recommended: q === S.rec };
   }) : [];
   return { cmpRows, nPay, planOnly, stdTotal, collSave, brkW, breaks, price, collective, fullPricePhase, rows, schedule, weeks, visits, nProg, progAt, visitFee, progFee, reFee, total, disc, saving, full, n, pays, cardTotal, start, end, exWeeks, exVisits, exPaid };
 }
@@ -1069,6 +1082,7 @@ function fileNote(c, name, kid) {
   L.push(`Prepared ${d(new Date())}`);
   L.push(`Phase: ${S.phase}`);
   L.push(`Visit frequency: ${freq}`);
+  if (COMPARE[S.phase] && S.rec >= 0) L.push(`Recommended by Dr. Steve: ${FREQS[S.rec][1]}${S.cur >= 0 ? ` · Current: ${FREQS[S.cur][1]}` : ""}`);
   L.push(`Time frame: ${d(c.start)} – ${d(c.end)} (${c.weeks} weeks${c.brkW ? `, plus ${c.brkW} week${c.brkW > 1 ? "s" : ""} office closure: ${c.breaks.map(b => `${d(b.date)} for ${b.w} wk${b.w > 1 ? "s" : ""}`).join("; ")}` : ""})`);
   const perks = INCLUDED.filter(x => x.tag && $(x.id).checked && (!x.phases || x.phases.includes(S.phase)));
   if (perks.length) L.push(`Member perk: ${perks.map(x => x.desc.replace("you're", "they're").replace("your immediate family", "their immediate family")).join(" ")}`);
@@ -1093,6 +1107,26 @@ function fileNote(c, name, kid) {
     if (card) L.push(`Charge the amounts above. The card machine adds the ${CARD_FEE}% fee itself.`);
   }
   return L.join("\n");
+}
+
+
+// Optimize / Maintenance frequency table: per-week cost, and every option compared with the recommended one
+// (or the current one if there's no recommendation). Recommended first, then most to least frequent.
+function cmpTable(c) {
+  const ref = c.cmpRows.find(r => r.recommended) || c.cmpRows.find(r => r.current) || null;
+  const rows = [...c.cmpRows].sort((a, b) => (b.recommended - a.recommended) || (b.visits - a.visits));
+  const vs = ref ? (ref.recommended ? "Compared to recommended" : "Compared to current") : "";
+  const diff = r => {
+    if (!ref || r === ref) return "";
+    const d = r2(r.perWeek - ref.perWeek), n = Math.abs(r.visits - ref.visits), adj = `${n} ${d < 0 ? "fewer" : "more"} adjustment${n === 1 ? "" : "s"}`;
+    return d < 0 ? `<b>Saves ${money(-d)}/wk</b> (about ${money(-d / 7)} a day) · ${adj} · ${CMP_WORDS.down}`
+                 : `<b>+${money(d)}/wk</b> · ${adj} · ${CMP_WORDS.up}`;
+  };
+  return `<table class="cmp num">
+        <thead><tr><th>How often</th><th>Visits</th><th>Per week</th>${ref ? `<th class="vs">${vs}</th>` : ""}<th></th></tr></thead>
+        <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Current frequency</small>` : ""}<em>Total ${money(r.fee)}${c.nPay > 1 ? ` · ${c.nPay} payments of ${money(r.pay)}` : ""}</em></td><td>${r.visits}</td><td>${money(r.perWeek)}</td>${ref ? `<td class="vs">${diff(r)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
+      </table>
+      ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }
 
 function render() {
@@ -1181,11 +1215,8 @@ function render() {
         <tfoot><tr><td>Total</td><td class="num">${c.weeks} weeks</td><td class="num">${c.visits} visits</td></tr></tfoot></table>
     </section>`}
     ${c.cmpRows.length ? `<section class="sec">
-      <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), ${c.nProg ? `${c.weeks >= YEARLY_WEEKS ? "6-month progress exam" : `${c.nProg} progress exam${c.nProg > 1 ? "s" : ""}`} and ` : ""}re-examination included</span></div>
-      <table class="cmp num">
-        <thead><tr><th>How often</th><th>Visits</th><th>Care plan<small>${c.collSave ? `<s>${money(PRICE_FULL)}</s> ` : ""}${money(c.price)} per visit${c.collSave ? " · Connect Collective" : ""}</small></th><th>${c.nPay > 1 ? `${c.nPay} payments of` : "Payment"}</th>${c.collSave ? "<th>Member savings</th>" : ""}<th></th></tr></thead>
-        <tbody>${c.cmpRows.map(r => `<tr class="${r.current ? "cur" : ""}"><td>${r.label}${r.current ? `<small>Current frequency</small>` : ""}</td><td>${r.visits}</td><td>${money(r.fee)}</td><td>${money(r.pay)}</td>${c.collSave ? `<td class="save">${money(r.ppv - r.fee)}</td>` : ""}<td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
-      </table>
+      <div class="h3"><h3>Choose ${whose} visit frequency</h3><span>${(TIMEFRAMES.find(t => t.w === c.weeks) || { label: `${c.weeks} weeks` }).label} (${c.weeks} weeks), ${c.nProg ? `${c.weeks >= YEARLY_WEEKS ? "6-month progress exam" : `${c.nProg} progress exam${c.nProg > 1 ? "s" : ""}`} and ` : ""}re-examination included · ${money(c.price)} per visit</span></div>
+      ${cmpTable(c)}
     </section>` : ""}
 
     ${onePage ? payBlock : `<section class="sec">

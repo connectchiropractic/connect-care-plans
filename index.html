@@ -637,7 +637,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
     <nav class="tabs" id="tabs" aria-label="Open care plans"></nav>
     <div class="bar">
       <div class="file">Save as <span id="fname"></span></div>
-      <div class="btns"><button type="button" class="btn" id="copy">Copy file name</button><button type="button" class="btn" id="print">Print</button><button type="button" class="btn go" id="savePdf">Save PDF</button></div>
+      <div class="btns"><button type="button" class="btn" id="copy">Copy file name</button><button type="button" class="btn go" id="savePdf">Save PDF</button></div>
     </div>
     <div class="needbox" id="needBox" hidden></div>
     <article class="paper" id="p1"></article>
@@ -923,7 +923,6 @@ $("copyNote").onclick = async () => {
   catch { $("note").select(); b.textContent = "Selected, press ⌘C"; }
   setTimeout(() => b.textContent = "Copy note", 1800);
 };
-$("print").onclick = () => { fitPages(); window.print(); };
 // Save PDF: builds the two pages into a letter-size PDF in the browser and downloads it,
 // named like the old files, with no print window. Each page is laid out exactly as it prints.
 async function buildPdf() {
@@ -964,7 +963,7 @@ $("savePdf").onclick = async () => {
     b.textContent = "Saved to Downloads";
   } catch (err) {
     console.error(err);
-    b.textContent = "Couldn't save. Use Print instead";
+    b.textContent = "Couldn't save. Try again";
   }
   setTimeout(() => { b.textContent = label; b.disabled = false; }, 2500);
 };
@@ -1194,7 +1193,7 @@ function render() {
   document.body.classList.toggle("incomplete", miss.length > 0);
   $("needBox").hidden = !miss.length;
   $("needBox").innerHTML = miss.length ? `<b>Fill in the required fields to see the plan</b>${miss.map(esc).join(" · ")}` : "";
-  ["copy", "print", "savePdf", "copyNote"].forEach(id => $(id).disabled = miss.length > 0);
+  ["copy", "savePdf", "copyNote"].forEach(id => $(id).disabled = miss.length > 0);
   drawTabs();
   const full = [last, first].filter(Boolean).join(", ") || "Patient";
   // On Connect Kids plans, headings speak about the child by name ("Alex's visits").

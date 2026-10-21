@@ -1173,7 +1173,7 @@ function cmpTable(c) {
         <thead><tr><th>How often</th><th>Visits</th>${pifCol ? "<th>Pay in full</th>" : ""}<th>${inst ? "Monthly instalments" : "Total"}</th><th></th></tr></thead>
         <tbody>${rows.map(r => `<tr class="${r.recommended ? "rec" : ""} ${r.current ? "cur" : ""}"><td>${r.recommended ? `<span class="recbadge">${CMP_WORDS.badge}</span>` : ""}${r.label}${r.current ? `<small>Previous frequency</small>` : ""}<em>${r.visits} visits${r.extra ? ` + ${r.extra} boost check-up${r.extra > 1 ? "s" : ""}` : ""} + ${exams}, ${money(c.price)} each</em>${r.recommended ? call : ""}</td><td>${r.visits + r.extra}${r.extra ? `<em>incl. ${r.extra} boost</em>` : ""}</td>${pifCol ? `<td class="pif">${money(r.pif)}<em>save ${money(r2(r.fee - r.pif))}</em></td>` : ""}<td>${money(inst ? r.pay : r.fee)}${inst ? `<em>× ${c.nPay} = ${money(r.fee)}</em>` : ""}</td><td><span class="tick"><i></i>I choose this</span></td></tr>`).join("")}</tbody>
       </table>
-      ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
+      ${c.collSave ? `<p class="cmp-note">Connect Collective member pricing applies when you choose option 1 or option 2: every visit and exam is ${money(c.price)} instead of ${money(PRICE_FULL)}, so you save ${money(PRICE_FULL - c.price)} on each one.</p>` : ""}`;
 }
 
 function render() {
@@ -1303,7 +1303,7 @@ function render() {
       ${c.collSave ? `<div class="coll">
         <div class="cside"><span>Standard price</span><b class="num"><s>${money(PRICE_FULL)}</s> per visit</b><b class="num big"><s>${money(c.stdTotal)}</s></b></div>
         <div class="cside you"><span>Your Connect Collective price</span><b class="num">${money(c.price)} per visit</b><b class="num big">${money(c.total)}</b></div>
-        <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>${c.planOnly ? `<p class="coll-note">Connect Collective pricing applies when you choose one of the care plan options on page 2.</p>` : ""}` : ""}
+        <div class="csave"><span>You save</span><b class="num">${money(c.collSave)}</b></div></div>${c.planOnly ? `<p class="coll-note">Connect Collective pricing applies when you choose option 1 or option 2 on page 2.</p>` : ""}` : ""}
       <div class="fee"><span>${Whose} program fee${c.collective ? " · Connect Collective pricing" : ""}</span><b class="num">${money(c.total)}</b></div>
     </section>`}
 

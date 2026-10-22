@@ -97,9 +97,11 @@ details > div { padding: 0 12px 12px; display: grid; gap: 10px; }
 .step:has(.miss) > h2::after { content: "Required"; margin-left: auto; font: 700 10px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--move); }
 .step > h2 { display: flex; align-items: center; }
 body.nophase .step.ph { display: none; }
-body.incomplete .paper { display: none; }
-.needbox { max-width: 816px; width: 100%; margin: 0 auto; background: var(--field); border: 1px solid var(--rule); border-left: 4px solid var(--move); border-radius: 10px; padding: 18px 20px; font: 500 14px var(--body); color: var(--ink); }
-.needbox b { display: block; font: 700 15px var(--ui); margin-bottom: 6px; }
+/* Until the required fields are in, the plan shows blurred behind a short note (it can't be saved). */
+body.incomplete .paper { filter: blur(5px); opacity: .8; pointer-events: none; user-select: none; }
+@media print { body.incomplete .paper { display: none; } }
+.needbox { position: sticky; top: 16px; z-index: 3; max-width: 460px; width: 100%; margin: 0 auto -6px; text-align: center; background: var(--field); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 20px; box-shadow: 0 6px 24px rgba(19, 32, 28, .12); font: 500 12.5px var(--body); color: var(--faint); }
+.needbox b { display: block; font: 700 14px var(--ui); color: var(--ink); margin-bottom: 4px; }
 .needbox[hidden] { display: none; }
 /* Plan tabs: up to MAX_TABS plans open at once (kept in this window only). */
 .tabs { max-width: 816px; width: 100%; margin: 0 auto; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -619,7 +621,7 @@ body.locked .lock { display: grid; place-items: center; min-height: 100vh; paddi
     </section>
 
     <section class="step ph"><h2><b>7</b>Payments</h2>
-      <p class="hint">Worked out for you: one payment for every full 4 weeks of the plan (10 weeks = 2, 14 weeks = 3), all paid at least 2 weeks before the plan ends. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
+      <p class="hint">Worked out for you: one payment for every full 4 weeks of the plan (10 weeks = 2, 14 weeks = 3), all paid at least 2 weeks before the plan ends. Plans of 6 weeks or more always get at least 2 payments. Payment 1 is taken in office. The first GoCardless withdrawal is the next 1st or 15th at least 15 days later, then the same day each month. Card payments are charged at these same amounts; the card machine adds the 2.4% itself.</p>
       <div class="pays" id="pays"></div>
     </section>
 
@@ -667,7 +669,7 @@ const EXTRA_CHECKUPS_MAX = 12;   // "Boost check-ups" dropdown: optional check-u
 const EXAMS_FREE_PHASES = ["Optimize", "Maintenance"];   // pay in full: progress exams and re-examination at no charge (staff can untick)
 const CARD_FEE = 2.4;              // percent, on instalments paid by credit card in office
 const WEEKS_PER_PAYMENT = 4;          // one payment for every 4 weeks of the plan
-const MIN_WEEKS_FOR_INSTALMENTS = 7;  // 7+ week plans always get at least 2 payments (5–6 weeks: pay in full)
+const MIN_WEEKS_FOR_INSTALMENTS = 6;  // 6+ week plans always get at least 2 payments (5 weeks or less: pay in full)
 const PAID_OFF_DAYS_BEFORE_END = 14;   // every payment is in at least 2 weeks before the plan ends
 const MIN_DAYS_TO_FIRST_DRAW = 15;    // first GoCardless withdrawal is at least this many days after payment 1
 // The journey printed on the plan. Maintenance sits at the top alongside Optimize.
@@ -1012,13 +1014,14 @@ function payDates(start, n) {
   const first = nextDraw(addDays(start, MIN_DAYS_TO_FIRST_DRAW));
   return Array.from({ length: n }, (_, i) => i === 0 ? start : new Date(first.getFullYear(), first.getMonth() + i - 1, first.getDate()));
 }
-// One payment per full 4 weeks of care, rounded down (10 weeks = 2, 14 weeks = 3), at least 2 from 7 weeks up,
-// and never so many that
-// the last one falls within 2 weeks of the end of the plan.
+// One payment per full 4 weeks of care, rounded down (10 weeks = 2, 14 weeks = 3), at least 2 from 6 weeks up,
+// and never so many that the last one falls within 2 weeks of the end of the plan. That rule can bring the
+// count down to 2 but never below it: on a 6-week plan the 2nd payment can land 11–14 days before the end.
 function paymentCount(start, weeks, end) {
-  let n = Math.max(weeks >= MIN_WEEKS_FOR_INSTALMENTS ? 2 : 1, Math.floor(weeks / WEEKS_PER_PAYMENT));
+  const floor = weeks >= MIN_WEEKS_FOR_INSTALMENTS ? 2 : 1;
+  let n = Math.max(floor, Math.floor(weeks / WEEKS_PER_PAYMENT));
   const latest = addDays(end, -PAID_OFF_DAYS_BEFORE_END);
-  while (n > 1 && payDates(start, n)[n - 1] > latest) n--;
+  while (n > floor && payDates(start, n)[n - 1] > latest) n--;
   return n;
 }
 
@@ -1198,7 +1201,7 @@ function render() {
   document.body.classList.toggle("nophase", !S.set.phase);
   document.body.classList.toggle("incomplete", miss.length > 0);
   $("needBox").hidden = !miss.length;
-  $("needBox").innerHTML = miss.length ? `<b>Fill in the required fields to see the plan</b>${miss.map(esc).join(" · ")}` : "";
+  $("needBox").innerHTML = miss.length ? `<b>Fill in the steps on the left to see the plan</b>Still needed: ${miss.map(esc).join(" · ")}` : "";
   ["copy", "savePdf", "copyNote"].forEach(id => $(id).disabled = miss.length > 0);
   drawTabs();
   const full = [last, first].filter(Boolean).join(", ") || "Patient";

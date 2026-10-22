@@ -862,11 +862,11 @@ function spreadPage(p) {
   if (free <= 4) return;
   const gaps = Math.max(1, p.children.length - 1);
   p.style.gap = `${BASE_GAP + Math.min(MAX_EXTRA_GAP, free / gaps)}px`;
-  const bottom = p.querySelector(":scope > .init");
+  const bottom = p.querySelector(":scope > .init") || p.querySelector(":scope > .foot");   // signature line, else the footer, sits at the bottom
   const left = PAGE_H - p.scrollHeight;
   if (bottom && left > 0) bottom.style.marginTop = `${left}px`;
 }
-function unspreadPage(p) { p.style.gap = ""; const b = p.querySelector(":scope > .init"); if (b) b.style.marginTop = ""; }
+function unspreadPage(p) { p.style.gap = ""; p.querySelectorAll(":scope > .init, :scope > .foot").forEach(b => b.style.marginTop = ""); }
 function fitPages() {
   document.body.classList.add("pv");
   document.querySelectorAll(".paper:not([hidden])").forEach(p => {
@@ -1326,8 +1326,7 @@ function render() {
 
     ${shown.length ? `<section class="incl"><h4>Included with ${whose} care</h4><div class="incl-row" style="--cols:${shown.length === 4 ? 2 : Math.min(shown.length, 3)}">${shown.map(x => `<div class="it${x.value ? " featured" : ""}">${icon(x.id)}<div><b>${x.name}${x.value ? ` <span class="pill bonus">Bonus · ${money(x.value).replace(".00", "")} value</span>` : ""}${x.tag ? ` <span class="pill bonus">${x.tag}</span>` : ""}${isBonus(x) ? ` <span class="pill bonus inl">Bonus</span>` : ""}</b><span>${x.desc}</span></div></div>`).join("")}</div></section>` : ""}
     ${onePage ? `<p class="terms-note">The terms and policies of your Connect care agreement continue to apply. Ask us anytime for a copy.</p>
-    <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>`
-    : `<div class="init"><div><span>${kid ? "Parent / guardian initials" : "Client initials"}</span></div><div><span>Doctor initials</span></div></div>`}
+    <div class="init"><div><span>${kid ? "Parent / guardian signature" : "Client signature"}</span></div><div><span>Date</span></div></div>` : ""}
     <div class="foot"><span>Page 1 of ${onePage ? 1 : 2} · Care plan</span>${TAGLINE}<span>${esc(full)}</span></div>`;
 
   $("p2").hidden = onePage;
